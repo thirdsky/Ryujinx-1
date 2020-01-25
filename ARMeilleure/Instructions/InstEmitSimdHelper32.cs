@@ -543,11 +543,7 @@ namespace ARMeilleure.Instructions
             }
             else
             {
-                long low = (index < 2) ? (1L << (index * 32 + 31)) : 0;
-                long high = (index > 1) ? (1L << (index * 32 - 33)) : 0;
-                Operand mask = X86GetElements(context, high, low);
-                value = EmitSwapScalar(context, value, reg, doubleWidth);
-                return context.AddIntrinsic(Intrinsic.X86Blendvps, target, value, mask);
+                return context.AddIntrinsic(Intrinsic.X86Insertps, target, value, Const(index << 4));
             }
         }
 
@@ -560,14 +556,14 @@ namespace ARMeilleure.Instructions
             Operand m = GetVecA32(op.Qm);
             Operand d = GetVecA32(op.Qd);
 
-            if (!op.Q) //register swap: move relevant doubleword to destination side
+            if (!op.Q) // Register swap: move relevant doubleword to destination side.
             {
                 m = EmitSwapDoubleWordToSide(context, m, op.Vm, op.Vd);
             }
 
             Operand res = vectorFunc(m);
 
-            if (!op.Q) //register insert
+            if (!op.Q) // Register insert.
             {
                 res = EmitDoubleWordInsert(context, d, res, op.Vd);
             }
@@ -594,7 +590,7 @@ namespace ARMeilleure.Instructions
 
             if (side == -1) side = op.Vd;
 
-            if (!op.Q) //register swap: move relevant doubleword to destination side
+            if (!op.Q) // Register swap: move relevant doubleword to destination side.
             {
                 n = EmitSwapDoubleWordToSide(context, n, op.Vn, side);
                 m = EmitSwapDoubleWordToSide(context, m, op.Vm, side);
@@ -602,7 +598,7 @@ namespace ARMeilleure.Instructions
 
             Operand res = vectorFunc(n, m);
 
-            if (!op.Q) //register insert
+            if (!op.Q) // Register insert.
             {
                 if (side != op.Vd) EmitSwapDoubleWordToSide(context, m, side, op.Vd);
                 res = EmitDoubleWordInsert(context, d, res, op.Vd);
@@ -628,7 +624,7 @@ namespace ARMeilleure.Instructions
             Operand d = GetVecA32(op.Qd);
             Operand initialD = d;
 
-            if (!op.Q) //register swap: move relevant doubleword to destination side
+            if (!op.Q) // Register swap: move relevant doubleword to destination side.
             {
                 n = EmitSwapDoubleWordToSide(context, n, op.Vn, op.Vd);
                 m = EmitSwapDoubleWordToSide(context, m, op.Vm, op.Vd);
@@ -671,15 +667,8 @@ namespace ARMeilleure.Instructions
 
             Operand res = scalarFunc(m);
 
-            if (false) // op.Vd == op.Vm) //small optimisation: can just swap it back for the result
-            {
-                res = EmitSwapScalar(context, res, op.Vd, doubleSize);
-            } 
-            else
-            {
-                // insert scalar into vector
-                res = EmitInsertScalar(context, d, res, op.Vd, doubleSize);
-            }
+            // Insert scalar into vector.
+            res = EmitInsertScalar(context, d, res, op.Vd, doubleSize);
 
             context.Copy(d, res);
         }
@@ -708,15 +697,8 @@ namespace ARMeilleure.Instructions
 
             Operand res = scalarFunc(n, m);
 
-            if (false) // //small optimisation: can just swap it back for the result
-            {
-                res = EmitSwapScalar(context, res, op.Vd, doubleSize);
-            }
-            else
-            {
-                // insert scalar into vector
-                res = EmitInsertScalar(context, d, res, op.Vd, doubleSize);
-            }
+            // Insert scalar into vector.
+            res = EmitInsertScalar(context, d, res, op.Vd, doubleSize);
 
             context.Copy(d, res);
         }
@@ -747,7 +729,7 @@ namespace ARMeilleure.Instructions
 
             Operand res = scalarFunc(d, n, m);
 
-            // insert scalar into vector
+            // Insert scalar into vector.
             res = EmitInsertScalar(context, initialD, res, op.Vd, doubleSize);
 
             context.Copy(initialD, res);
@@ -783,14 +765,14 @@ namespace ARMeilleure.Instructions
             Operand m = GetVecA32(op.Vm >> 2);
             m = context.AddIntrinsic(Intrinsic.X86Shufps, m, m, Const(dupeMask));
 
-            if (!op.Q) //register swap: move relevant doubleword to destination side
+            if (!op.Q) // Register swap: move relevant doubleword to destination side.
             {
                 n = EmitSwapDoubleWordToSide(context, n, op.Vn, op.Vd);
             }
 
             Operand res = vectorFunc(n, m);
 
-            if (!op.Q) //register insert
+            if (!op.Q) // Register insert.
             {
                 res = EmitDoubleWordInsert(context, d, res, op.Vd);
             }
@@ -819,14 +801,14 @@ namespace ARMeilleure.Instructions
             Operand m = GetVecA32(op.Vm >> 2);
             m = context.AddIntrinsic(Intrinsic.X86Shufps, m, m, Const(dupeMask));
 
-            if (!op.Q) //register swap: move relevant doubleword to destination side
+            if (!op.Q) // Register swap: move relevant doubleword to destination side.
             {
                 n = EmitSwapDoubleWordToSide(context, n, op.Vn, op.Vd);
             }
 
             Operand res = vectorFunc(d, n, m);
 
-            if (!op.Q) //register insert
+            if (!op.Q) // Register insert.
             {
                 res = EmitDoubleWordInsert(context, initialD, res, op.Vd);
             }
@@ -906,7 +888,7 @@ namespace ARMeilleure.Instructions
                     Operand mN = context.AddIntrinsic(Intrinsic.X86Punpcklqdq, n, m); // m:n
 
                     Operand left = context.AddIntrinsic(Intrinsic.X86Pshufb, mN, zeroEvenMask); // 0:even from m:n
-                    Operand right = context.AddIntrinsic(Intrinsic.X86Pshufb, mN, zeroOddMask);  // 0:odd  from m:n
+                    Operand right = context.AddIntrinsic(Intrinsic.X86Pshufb, mN, zeroOddMask); // 0:odd  from m:n
 
                     return context.AddIntrinsic(inst[op.Size], left, right);
                 }
