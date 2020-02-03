@@ -21,6 +21,7 @@
   <!-- Due to .net core 3.0 embedded resource loading -->
   <PropertyGroup>
     <EmbeddedResourceUseDependentUponConvention>false</EmbeddedResourceUseDependentUponConvention>
+    <ApplicationIcon>Ryujinx.ico</ApplicationIcon>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(RuntimeIdentifier)' == 'osx-x64'">
@@ -70,7 +71,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="DiscordRichPresence" Version="1.0.121" />
+    <PackageReference Include="DiscordRichPresence" Version="1.0.147" />
     <PackageReference Include="GtkSharp" Version="3.22.25.24" />
     <PackageReference Include="GtkSharp.Dependencies" Version="1.1.0" Condition="'$(RuntimeIdentifier)' != 'linux-x64' AND '$(RuntimeIdentifier)' != 'osx-x64'" />
     <PackageReference Include="OpenTK.NetStandard" Version="1.0.4" />
