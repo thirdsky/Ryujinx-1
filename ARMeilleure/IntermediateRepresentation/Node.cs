@@ -9,46 +9,71 @@ namespace ARMeilleure.IntermediateRepresentation
         {
             get
             {
-                return _destinations.Length != 0 ? GetDestination(0) : null;
+                return _destinations.Count != 0 ? GetDestination(0) : null;
             }
             set
             {
                 if (value != null)
                 {
-                    SetDestinations(new Operand[] { value });
+                    SetDestination(value);
                 }
                 else
                 {
-                    SetDestinations(new Operand[0]);
+                    _destinations.Clear();
                 }
             }
         }
 
-        private Operand[] _destinations;
-        private Operand[] _sources;
+        private List<Operand> _destinations;
+        private List<Operand> _sources;
+        private bool _clearedDest;
 
-        private LinkedListNode<Node>[] _asgUseNodes;
-        private LinkedListNode<Node>[] _srcUseNodes;
+        public int DestinationsCount => _destinations.Count;
+        public int SourcesCount => _sources.Count;
 
-        public int DestinationsCount => _destinations.Length;
-        public int SourcesCount      => _sources.Length;
+        private void Resize(List<Operand> list, int size)
+        {
+            while (list.Count > size)
+            {
+                list.RemoveAt(list.Count - 1);
+            }
+            while (list.Count < size)
+            {
+                list.Add(null);
+            }
+        }
 
-        public Node(Operand destination, int sourcesCount)
+        public Node()
+        {
+            _destinations = new List<Operand>();
+            _sources = new List<Operand>();
+        }
+
+        public Node(Operand destination, int sourcesCount) : this()
         {
             Destination = destination;
 
-            _sources = new Operand[sourcesCount];
-
-            _srcUseNodes = new LinkedListNode<Node>[sourcesCount];
+            Resize(_sources, sourcesCount);
         }
 
-        public Node(Operand[] destinations, int sourcesCount)
+        public Node With(Operand destination, int sourcesCount)
         {
+            _clearedDest = true;
+            _sources.Clear();
+            Destination = destination;
+
+            Resize(_sources, sourcesCount);
+            return this;
+        }
+
+        public Node With(Operand[] destinations, int sourcesCount)
+        {
+            _clearedDest = true;
+            _sources.Clear();
             SetDestinations(destinations ?? throw new ArgumentNullException(nameof(destinations)));
 
-            _sources = new Operand[sourcesCount];
-
-            _srcUseNodes = new LinkedListNode<Node>[sourcesCount];
+            Resize(_sources, sourcesCount);
+            return this;
         }
 
         public Operand GetDestination(int index)
@@ -65,15 +90,17 @@ namespace ARMeilleure.IntermediateRepresentation
         {
             Operand oldOp = _destinations[index];
 
-            if (oldOp != null && oldOp.Kind == OperandKind.LocalVariable)
+            if (oldOp != null && oldOp.Kind == OperandKind.LocalVariable && !_clearedDest)
             {
-                oldOp.Assignments.Remove(_asgUseNodes[index]);
+                oldOp.Assignments.Remove(this);
             }
 
             if (destination != null && destination.Kind == OperandKind.LocalVariable)
             {
-                _asgUseNodes[index] = destination.Assignments.AddLast(this);
+                destination.Assignments.Add(this);
             }
+
+            _clearedDest = false;
 
             _destinations[index] = destination;
         }
@@ -84,39 +111,53 @@ namespace ARMeilleure.IntermediateRepresentation
 
             if (oldOp != null && oldOp.Kind == OperandKind.LocalVariable)
             {
-                oldOp.Uses.Remove(_srcUseNodes[index]);
+                oldOp.Uses.Remove(this);
             }
 
             if (source != null && source.Kind == OperandKind.LocalVariable)
             {
-                _srcUseNodes[index] = source.Uses.AddLast(this);
+                source.Uses.Add(this);
             }
 
             _sources[index] = source;
         }
 
-        public void SetDestinations(Operand[] destinations)
+        private void RemoveOldDestinations()
         {
-            if (_destinations != null)
+            if (_destinations != null && !_clearedDest)
             {
-                for (int index = 0; index < _destinations.Length; index++)
+                for (int index = 0; index < _destinations.Count; index++)
                 {
                     Operand oldOp = _destinations[index];
 
                     if (oldOp != null && oldOp.Kind == OperandKind.LocalVariable)
                     {
-                        oldOp.Assignments.Remove(_asgUseNodes[index]);
+                        oldOp.Assignments.Remove(this);
                     }
                 }
-
-                _destinations = destinations;
             }
-            else
+            _clearedDest = false;
+        }
+
+        public void SetDestination(Operand destination)
+        {
+            RemoveOldDestinations();
+
+            Resize(_destinations, 1);
+
+            _destinations[0] = destination;
+
+            if (destination.Kind == OperandKind.LocalVariable)
             {
-                _destinations = new Operand[destinations.Length];
+                destination.Assignments.Add(this);
             }
+        }
 
-            _asgUseNodes = new LinkedListNode<Node>[destinations.Length];
+        public void SetDestinations(Operand[] destinations)
+        {
+            RemoveOldDestinations();
+
+            Resize(_destinations, destinations.Length);
 
             for (int index = 0; index < destinations.Length; index++)
             {
@@ -126,26 +167,43 @@ namespace ARMeilleure.IntermediateRepresentation
 
                 if (newOp.Kind == OperandKind.LocalVariable)
                 {
-                    _asgUseNodes[index] = newOp.Assignments.AddLast(this);
+                    newOp.Assignments.Add(this);
                 }
             }
         }
 
-        public void SetSources(Operand[] sources)
+        private void RemoveOldSources()
         {
-            for (int index = 0; index < _sources.Length; index++)
+            for (int index = 0; index < _sources.Count; index++)
             {
                 Operand oldOp = _sources[index];
 
                 if (oldOp != null && oldOp.Kind == OperandKind.LocalVariable)
                 {
-                    oldOp.Uses.Remove(_srcUseNodes[index]);
+                    oldOp.Uses.Remove(this);
                 }
             }
+        }
 
-            _sources = new Operand[sources.Length];
+        public void SetSource(Operand source)
+        {
+            RemoveOldSources();
 
-            _srcUseNodes = new LinkedListNode<Node>[sources.Length];
+            Resize(_sources, 1);
+
+            _sources[0] = source;
+
+            if (source.Kind == OperandKind.LocalVariable)
+            {
+                source.Uses.Add(this);
+            }
+        }
+
+        public void SetSources(Operand[] sources)
+        {
+            RemoveOldSources();
+
+            Resize(_sources, sources.Length);
 
             for (int index = 0; index < sources.Length; index++)
             {
@@ -155,7 +213,7 @@ namespace ARMeilleure.IntermediateRepresentation
 
                 if (newOp.Kind == OperandKind.LocalVariable)
                 {
-                    _srcUseNodes[index] = newOp.Uses.AddLast(this);
+                    newOp.Uses.Add(this);
                 }
             }
         }

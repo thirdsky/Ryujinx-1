@@ -143,7 +143,7 @@ namespace ARMeilleure.Translation
 
                 splitBlock2.Branch = successor;
 
-                splitBlock2.Operations.AddLast(new Operation(Instruction.Branch, null));
+                splitBlock2.Operations.AddLast(OperationHelper.Operation(Instruction.Branch, null));
 
                 Blocks.AddBefore(successor.Node, splitBlock2);
             }

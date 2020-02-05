@@ -1,10 +1,12 @@
 using ARMeilleure.CodeGen.RegisterAllocators;
 using ARMeilleure.IntermediateRepresentation;
 using ARMeilleure.Translation;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 
 using static ARMeilleure.IntermediateRepresentation.OperandHelper;
+using static ARMeilleure.IntermediateRepresentation.OperationHelper;
 
 namespace ARMeilleure.CodeGen.X86
 {
@@ -215,8 +217,8 @@ namespace ARMeilleure.CodeGen.X86
                     // - The value at the memory location is loaded to RDX:RAX.
                     void SplitOperand(Operand source, Operand lr, Operand hr)
                     {
-                        nodes.AddBefore(node, new Operation(Instruction.VectorExtract, lr, source, Const(0)));
-                        nodes.AddBefore(node, new Operation(Instruction.VectorExtract, hr, source, Const(1)));
+                        nodes.AddBefore(node, Operation(Instruction.VectorExtract, lr, source, Const(0)));
+                        nodes.AddBefore(node, Operation(Instruction.VectorExtract, hr, source, Const(1)));
                     }
 
                     Operand rax = Gpr(X86Register.Rax, OperandType.I64);
@@ -227,8 +229,8 @@ namespace ARMeilleure.CodeGen.X86
                     SplitOperand(operation.GetSource(1), rax, rdx);
                     SplitOperand(operation.GetSource(2), rbx, rcx);
 
-                    node = nodes.AddAfter(node, new Operation(Instruction.VectorCreateScalar, dest, rax));
-                    node = nodes.AddAfter(node, new Operation(Instruction.VectorInsert,       dest, dest, rdx, Const(1)));
+                    node = nodes.AddAfter(node, Operation(Instruction.VectorCreateScalar, dest, rax));
+                    node = nodes.AddAfter(node, Operation(Instruction.VectorInsert,       dest, dest, rdx, Const(1)));
 
                     operation.SetDestinations(new Operand[] { rdx, rax });
 
@@ -251,16 +253,16 @@ namespace ARMeilleure.CodeGen.X86
                     Operand edx = Gpr(X86Register.Rdx, OperandType.I32);
 
                     // Value 0x01 = Version, family and feature information.
-                    nodes.AddBefore(node, new Operation(Instruction.Copy, eax, Const(1)));
+                    nodes.AddBefore(node, Operation(Instruction.Copy, eax, Const(1)));
 
                     // Copy results to the destination register.
                     // The values are split into 2 32-bits registers, we merge them
                     // into a single 64-bits register.
                     Operand rcx = Gpr(X86Register.Rcx, OperandType.I64);
 
-                    node = nodes.AddAfter(node, new Operation(Instruction.ZeroExtend32, dest, edx));
-                    node = nodes.AddAfter(node, new Operation(Instruction.ShiftLeft,    dest, dest, Const(32)));
-                    node = nodes.AddAfter(node, new Operation(Instruction.BitwiseOr,    dest, dest, rcx));
+                    node = nodes.AddAfter(node, Operation(Instruction.ZeroExtend32, dest, edx));
+                    node = nodes.AddAfter(node, Operation(Instruction.ShiftLeft,    dest, dest, Const(32)));
+                    node = nodes.AddAfter(node, Operation(Instruction.BitwiseOr,    dest, dest, rcx));
 
                     operation.SetDestinations(new Operand[] { eax, ebx, ecx, edx });
 
@@ -283,10 +285,10 @@ namespace ARMeilleure.CodeGen.X86
                         Operand rax = Gpr(X86Register.Rax, src1.Type);
                         Operand rdx = Gpr(X86Register.Rdx, src1.Type);
 
-                        nodes.AddBefore(node, new Operation(Instruction.Copy,    rax, src1));
-                        nodes.AddBefore(node, new Operation(Instruction.Clobber, rdx));
+                        nodes.AddBefore(node, Operation(Instruction.Copy,    rax, src1));
+                        nodes.AddBefore(node, Operation(Instruction.Clobber, rdx));
 
-                        node = nodes.AddAfter(node, new Operation(Instruction.Copy, dest, rax));
+                        node = nodes.AddAfter(node, Operation(Instruction.Copy, dest, rax));
 
                         operation.SetDestinations(new Operand[] { rdx, rax });
 
@@ -310,7 +312,7 @@ namespace ARMeilleure.CodeGen.X86
                     {
                         Operand xmm0 = Xmm(X86Register.Xmm0, OperandType.V128);
 
-                        nodes.AddBefore(node, new Operation(Instruction.Copy, xmm0, operation.GetSource(2)));
+                        nodes.AddBefore(node, Operation(Instruction.Copy, xmm0, operation.GetSource(2)));
 
                         operation.SetSource(2, xmm0);
                     }
@@ -330,11 +332,11 @@ namespace ARMeilleure.CodeGen.X86
                     Operand rax = Gpr(X86Register.Rax, src1.Type);
                     Operand rdx = Gpr(X86Register.Rdx, src1.Type);
 
-                    nodes.AddBefore(node, new Operation(Instruction.Copy, rax, src1));
+                    nodes.AddBefore(node, Operation(Instruction.Copy, rax, src1));
 
                     operation.SetSource(0, rax);
 
-                    node = nodes.AddAfter(node, new Operation(Instruction.Copy, dest, rdx));
+                    node = nodes.AddAfter(node, Operation(Instruction.Copy, dest, rdx));
 
                     operation.SetDestinations(new Operand[] { rdx, rax });
 
@@ -351,7 +353,7 @@ namespace ARMeilleure.CodeGen.X86
                     {
                         Operand rcx = Gpr(X86Register.Rcx, OperandType.I32);
 
-                        nodes.AddBefore(node, new Operation(Instruction.Copy, rcx, operation.GetSource(1)));
+                        nodes.AddBefore(node, Operation(Instruction.Copy, rcx, operation.GetSource(1)));
 
                         operation.SetSource(1, rcx);
                     }
@@ -402,17 +404,17 @@ namespace ARMeilleure.CodeGen.X86
                     // local would be overwritten.
                     Operand temp = Local(dest.Type);
 
-                    nodes.AddBefore(node, new Operation(Instruction.Copy, temp, src1));
+                    nodes.AddBefore(node, Operation(Instruction.Copy, temp, src1));
 
                     operation.SetSource(0, temp);
 
-                    node = nodes.AddAfter(node, new Operation(Instruction.Copy, dest, temp));
+                    node = nodes.AddAfter(node, Operation(Instruction.Copy, dest, temp));
 
                     operation.Destination = temp;
                 }
                 else
                 {
-                    nodes.AddBefore(node, new Operation(Instruction.Copy, dest, src1));
+                    nodes.AddBefore(node, Operation(Instruction.Copy, dest, src1));
 
                     operation.SetSource(0, dest);
                 }
@@ -426,17 +428,17 @@ namespace ARMeilleure.CodeGen.X86
                 {
                     Operand temp = Local(dest.Type);
 
-                    nodes.AddBefore(node, new Operation(Instruction.Copy, temp, src3));
+                    nodes.AddBefore(node, Operation(Instruction.Copy, temp, src3));
 
                     operation.SetSource(2, temp);
 
-                    node = nodes.AddAfter(node, new Operation(Instruction.Copy, dest, temp));
+                    node = nodes.AddAfter(node, Operation(Instruction.Copy, dest, temp));
 
                     operation.Destination = temp;
                 }
                 else
                 {
-                    nodes.AddBefore(node, new Operation(Instruction.Copy, dest, src3));
+                    nodes.AddBefore(node, Operation(Instruction.Copy, dest, src3));
 
                     operation.SetSource(2, dest);
                 }
@@ -465,8 +467,8 @@ namespace ARMeilleure.CodeGen.X86
                 // and then use the 64-bits signed conversion instructions.
                 Operand zex = Local(OperandType.I64);
 
-                node = nodes.AddAfter(node, new Operation(Instruction.ZeroExtend32, zex,  source));
-                node = nodes.AddAfter(node, new Operation(Instruction.ConvertToFP,  dest, zex));
+                node = nodes.AddAfter(node, Operation(Instruction.ZeroExtend32, zex,  source));
+                node = nodes.AddAfter(node, Operation(Instruction.ConvertToFP,  dest, zex));
             }
             else /* if (source.Type == OperandType.I64) */
             {
@@ -485,17 +487,17 @@ namespace ARMeilleure.CodeGen.X86
 
                 Operand lsbF = Local(dest.Type);
 
-                node = nodes.AddAfter(node, new Operation(Instruction.Copy, lsb,  source));
-                node = nodes.AddAfter(node, new Operation(Instruction.Copy, half, source));
+                node = nodes.AddAfter(node, Operation(Instruction.Copy, lsb,  source));
+                node = nodes.AddAfter(node, Operation(Instruction.Copy, half, source));
 
-                node = nodes.AddAfter(node, new Operation(Instruction.BitwiseAnd,   lsb,  lsb,  Const(1L)));
-                node = nodes.AddAfter(node, new Operation(Instruction.ShiftRightUI, half, half, Const(1)));
+                node = nodes.AddAfter(node, Operation(Instruction.BitwiseAnd,   lsb,  lsb,  Const(1L)));
+                node = nodes.AddAfter(node, Operation(Instruction.ShiftRightUI, half, half, Const(1)));
 
-                node = nodes.AddAfter(node, new Operation(Instruction.ConvertToFP, lsbF, lsb));
-                node = nodes.AddAfter(node, new Operation(Instruction.ConvertToFP, dest, half));
+                node = nodes.AddAfter(node, Operation(Instruction.ConvertToFP, lsbF, lsb));
+                node = nodes.AddAfter(node, Operation(Instruction.ConvertToFP, dest, half));
 
-                node = nodes.AddAfter(node, new Operation(Instruction.Add, dest, dest, dest));
-                node = nodes.AddAfter(node, new Operation(Instruction.Add, dest, dest, lsbF));
+                node = nodes.AddAfter(node, Operation(Instruction.Add, dest, dest, dest));
+                node = nodes.AddAfter(node, Operation(Instruction.Add, dest, dest, lsbF));
             }
 
             Delete(currentNode, operation);
@@ -520,7 +522,7 @@ namespace ARMeilleure.CodeGen.X86
 
             Operand res = Local(dest.Type);
 
-            node = nodes.AddAfter(node, new Operation(Instruction.VectorOne, res));
+            node = nodes.AddAfter(node, Operation(Instruction.VectorOne, res));
 
             if (dest.Type == OperandType.FP32)
             {
@@ -533,7 +535,7 @@ namespace ARMeilleure.CodeGen.X86
 
             node = nodes.AddAfter(node, new IntrinsicOperation(Intrinsic.X86Xorps, res, res, source));
 
-            node = nodes.AddAfter(node, new Operation(Instruction.Copy, dest, res));
+            node = nodes.AddAfter(node, Operation(Instruction.Copy, dest, res));
 
             Delete(currentNode, operation);
 
@@ -561,26 +563,26 @@ namespace ARMeilleure.CodeGen.X86
             Operand temp1 = Local(OperandType.I32);
             Operand temp2 = Local(OperandType.I32);
 
-            node = nodes.AddAfter(node, new Operation(Instruction.Copy, temp2, src2));
+            node = nodes.AddAfter(node, Operation(Instruction.Copy, temp2, src2));
 
-            Operation vextOp = new Operation(Instruction.VectorExtract16, temp1, src1, Const(index >> 1));
+            Operation vextOp = Operation(Instruction.VectorExtract16, temp1, src1, Const(index >> 1));
 
             node = nodes.AddAfter(node, vextOp);
 
             if ((index & 1) != 0)
             {
-                node = nodes.AddAfter(node, new Operation(Instruction.ZeroExtend8, temp1, temp1));
-                node = nodes.AddAfter(node, new Operation(Instruction.ShiftLeft,   temp2, temp2, Const(8)));
-                node = nodes.AddAfter(node, new Operation(Instruction.BitwiseOr,   temp1, temp1, temp2));
+                node = nodes.AddAfter(node, Operation(Instruction.ZeroExtend8, temp1, temp1));
+                node = nodes.AddAfter(node, Operation(Instruction.ShiftLeft,   temp2, temp2, Const(8)));
+                node = nodes.AddAfter(node, Operation(Instruction.BitwiseOr,   temp1, temp1, temp2));
             }
             else
             {
-                node = nodes.AddAfter(node, new Operation(Instruction.ZeroExtend8, temp2, temp2));
-                node = nodes.AddAfter(node, new Operation(Instruction.BitwiseAnd,  temp1, temp1, Const(0xff00)));
-                node = nodes.AddAfter(node, new Operation(Instruction.BitwiseOr,   temp1, temp1, temp2));
+                node = nodes.AddAfter(node, Operation(Instruction.ZeroExtend8, temp2, temp2));
+                node = nodes.AddAfter(node, Operation(Instruction.BitwiseAnd,  temp1, temp1, Const(0xff00)));
+                node = nodes.AddAfter(node, Operation(Instruction.BitwiseOr,   temp1, temp1, temp2));
             }
 
-            Operation vinsOp = new Operation(Instruction.VectorInsert16, dest, src1, temp1, Const(index >> 1));
+            Operation vinsOp = Operation(Instruction.VectorInsert16, dest, src1, temp1, Const(index >> 1));
 
             node = nodes.AddAfter(node, vinsOp);
 
@@ -626,7 +628,7 @@ namespace ARMeilleure.CodeGen.X86
 
                 arg0Reg = Gpr(CallingConvention.GetIntArgumentRegister(0), OperandType.I64);
 
-                Operation allocOp = new Operation(Instruction.StackAlloc, arg0Reg, Const(stackOffset));
+                Operation allocOp = Operation(Instruction.StackAlloc, arg0Reg, Const(stackOffset));
 
                 nodes.AddBefore(node, allocOp);
 
@@ -661,9 +663,9 @@ namespace ARMeilleure.CodeGen.X86
 
                     int stackOffset = AllocateOnStack(source.Type.GetSizeInBytes());
 
-                    nodes.AddBefore(node, new Operation(Instruction.StackAlloc, stackAddr, Const(stackOffset)));
+                    nodes.AddBefore(node, Operation(Instruction.StackAlloc, stackAddr, Const(stackOffset)));
 
-                    Operation storeOp = new Operation(Instruction.Store, null, stackAddr, source);
+                    Operation storeOp = Operation(Instruction.Store, null, stackAddr, source);
 
                     HandleConstantCopy(nodes.AddBefore(node, storeOp), storeOp);
 
@@ -689,7 +691,7 @@ namespace ARMeilleure.CodeGen.X86
                     argReg = Xmm(CallingConvention.GetVecArgumentRegister(argIndex), source.Type);
                 }
 
-                Operation copyOp = new Operation(Instruction.Copy, argReg, source);
+                Operation copyOp = Operation(Instruction.Copy, argReg, source);
 
                 HandleConstantCopy(nodes.AddBefore(node, copyOp), copyOp);
 
@@ -702,9 +704,9 @@ namespace ARMeilleure.CodeGen.X86
             {
                 Operand source = operation.GetSource(index + 1);
 
-                Operand offset = new Operand((index + retArgs) * 8);
+                Operand offset = Const((index + retArgs) * 8);
 
-                Operation spillOp = new Operation(Instruction.SpillArg, null, offset, source);
+                Operation spillOp = Operation(Instruction.SpillArg, null, offset, source);
 
                 HandleConstantCopy(nodes.AddBefore(node, spillOp), spillOp);
             }
@@ -715,9 +717,9 @@ namespace ARMeilleure.CodeGen.X86
                 {
                     Operand retValueAddr = Local(OperandType.I64);
 
-                    nodes.AddBefore(node, new Operation(Instruction.Copy, retValueAddr, arg0Reg));
+                    nodes.AddBefore(node, Operation(Instruction.Copy, retValueAddr, arg0Reg));
 
-                    Operation loadOp = new Operation(Instruction.Load, dest, retValueAddr);
+                    Operation loadOp = Operation(Instruction.Load, dest, retValueAddr);
 
                     node = nodes.AddAfter(node, loadOp);
 
@@ -729,7 +731,7 @@ namespace ARMeilleure.CodeGen.X86
                         ? Gpr(CallingConvention.GetIntReturnRegister(), dest.Type)
                         : Xmm(CallingConvention.GetVecReturnRegister(), dest.Type);
 
-                    Operation copyOp = new Operation(Instruction.Copy, dest, retReg);
+                    Operation copyOp = Operation(Instruction.Copy, dest, retReg);
 
                     node = nodes.AddAfter(node, copyOp);
 
@@ -787,8 +789,8 @@ namespace ARMeilleure.CodeGen.X86
                     Operand argReg  = Gpr(CallingConvention.GetIntArgumentRegister(intCount++), OperandType.I64);
                     Operand argReg2 = Gpr(CallingConvention.GetIntArgumentRegister(intCount++), OperandType.I64);
 
-                    nodes.AddBefore(node, new Operation(Instruction.VectorExtract, argReg,  source, Const(0)));
-                    nodes.AddBefore(node, new Operation(Instruction.VectorExtract, argReg2, source, Const(1)));
+                    nodes.AddBefore(node, Operation(Instruction.VectorExtract, argReg,  source, Const(0)));
+                    nodes.AddBefore(node, Operation(Instruction.VectorExtract, argReg2, source, Const(1)));
 
                     continue;
                 }
@@ -799,7 +801,7 @@ namespace ARMeilleure.CodeGen.X86
                         ? Gpr(CallingConvention.GetIntArgumentRegister(intCount++), source.Type)
                         : Xmm(CallingConvention.GetVecArgumentRegister(vecCount++), source.Type);
 
-                    Operation copyOp = new Operation(Instruction.Copy, argReg, source);
+                    Operation copyOp = Operation(Instruction.Copy, argReg, source);
 
                     HandleConstantCopy(nodes.AddBefore(node, copyOp), copyOp);
 
@@ -807,9 +809,9 @@ namespace ARMeilleure.CodeGen.X86
                 }
                 else
                 {
-                    Operand offset = new Operand(stackOffset);
+                    Operand offset = Const(stackOffset);
 
-                    Operation spillOp = new Operation(Instruction.SpillArg, null, offset, source);
+                    Operation spillOp = Operation(Instruction.SpillArg, null, offset, source);
 
                     HandleConstantCopy(nodes.AddBefore(node, spillOp), spillOp);
 
@@ -824,8 +826,8 @@ namespace ARMeilleure.CodeGen.X86
                     Operand retLReg = Gpr(CallingConvention.GetIntReturnRegister(),     OperandType.I64);
                     Operand retHReg = Gpr(CallingConvention.GetIntReturnRegisterHigh(), OperandType.I64);
 
-                    node = nodes.AddAfter(node, new Operation(Instruction.VectorCreateScalar, dest, retLReg));
-                    node = nodes.AddAfter(node, new Operation(Instruction.VectorInsert,       dest, dest, retHReg, Const(1)));
+                    node = nodes.AddAfter(node, Operation(Instruction.VectorCreateScalar, dest, retLReg));
+                    node = nodes.AddAfter(node, Operation(Instruction.VectorInsert,       dest, dest, retHReg, Const(1)));
 
                     operation.Destination = null;
                 }
@@ -835,7 +837,7 @@ namespace ARMeilleure.CodeGen.X86
                         ? Gpr(CallingConvention.GetIntReturnRegister(), dest.Type)
                         : Xmm(CallingConvention.GetVecReturnRegister(), dest.Type);
 
-                    Operation copyOp = new Operation(Instruction.Copy, dest, retReg);
+                    Operation copyOp = Operation(Instruction.Copy, dest, retReg);
 
                     node = nodes.AddAfter(node, copyOp);
 
@@ -874,7 +876,7 @@ namespace ARMeilleure.CodeGen.X86
                     ? Gpr(CallingConvention.GetIntArgumentRegister(index), source.Type)
                     : Xmm(CallingConvention.GetVecArgumentRegister(index), source.Type);
 
-                Operation copyOp = new Operation(Instruction.Copy, argReg, source);
+                Operation copyOp = Operation(Instruction.Copy, argReg, source);
 
                 HandleConstantCopy(nodes.AddBefore(node, copyOp), copyOp);
 
@@ -886,7 +888,7 @@ namespace ARMeilleure.CodeGen.X86
             // callee saved register (which would be trashed on the epilogue).
             Operand retReg = Gpr(CallingConvention.GetIntReturnRegister(), OperandType.I64);
 
-            Operation addrCopyOp = new Operation(Instruction.Copy, retReg, operation.GetSource(0));
+            Operation addrCopyOp = Operation(Instruction.Copy, retReg, operation.GetSource(0));
 
             nodes.AddBefore(node, addrCopyOp);
 
@@ -936,14 +938,14 @@ namespace ARMeilleure.CodeGen.X86
                         pArg = Local(dest.Type);
                     }
 
-                    Operation copyOp = new Operation(Instruction.Copy, pArg, argReg);
+                    Operation copyOp = Operation(Instruction.Copy, pArg, argReg);
 
                     cctx.Cfg.Entry.Operations.AddFirst(copyOp);
 
                     preservedArgs[index] = pArg;
                 }
 
-                Operation argCopyOp = new Operation(dest.Type == OperandType.V128
+                Operation argCopyOp = Operation(dest.Type == OperandType.V128
                     ? Instruction.Load
                     : Instruction.Copy, dest, preservedArgs[index]);
 
@@ -1019,8 +1021,8 @@ namespace ARMeilleure.CodeGen.X86
                         Operand argLReg = Gpr(CallingConvention.GetIntArgumentRegister(intCount),     OperandType.I64);
                         Operand argHReg = Gpr(CallingConvention.GetIntArgumentRegister(intCount + 1), OperandType.I64);
 
-                        Operation copyL = new Operation(Instruction.VectorCreateScalar, pArg, argLReg);
-                        Operation copyH = new Operation(Instruction.VectorInsert,       pArg, pArg, argHReg, Const(1));
+                        Operation copyL = Operation(Instruction.VectorCreateScalar, pArg, argLReg);
+                        Operation copyH = Operation(Instruction.VectorInsert,       pArg, pArg, argHReg, Const(1));
 
                         cctx.Cfg.Entry.Operations.AddFirst(copyH);
                         cctx.Cfg.Entry.Operations.AddFirst(copyL);
@@ -1035,7 +1037,7 @@ namespace ARMeilleure.CodeGen.X86
                             ? Gpr(CallingConvention.GetIntArgumentRegister(intCount), dest.Type)
                             : Xmm(CallingConvention.GetVecArgumentRegister(vecCount), dest.Type);
 
-                        Operation copyOp = new Operation(Instruction.Copy, pArg, argReg);
+                        Operation copyOp = Operation(Instruction.Copy, pArg, argReg);
 
                         cctx.Cfg.Entry.Operations.AddFirst(copyOp);
 
@@ -1043,7 +1045,7 @@ namespace ARMeilleure.CodeGen.X86
                     }
                 }
 
-                Operation argCopyOp = new Operation(Instruction.Copy, dest, preservedArgs[index]);
+                Operation argCopyOp = Operation(Instruction.Copy, dest, preservedArgs[index]);
 
                 node.List.AddBefore(node, argCopyOp);
 
@@ -1082,7 +1084,7 @@ namespace ARMeilleure.CodeGen.X86
 
                     Operand arg0 = Gpr(CallingConvention.GetIntArgumentRegister(0), OperandType.I64);
 
-                    Operation copyOp = new Operation(Instruction.Copy, preservedArg, arg0);
+                    Operation copyOp = Operation(Instruction.Copy, preservedArg, arg0);
 
                     cctx.Cfg.Entry.Operations.AddFirst(copyOp);
 
@@ -1098,18 +1100,18 @@ namespace ARMeilleure.CodeGen.X86
 
             if (source.Type == OperandType.V128)
             {
-                Operation retStoreOp = new Operation(Instruction.Store, null, retReg, source);
+                Operation retStoreOp = Operation(Instruction.Store, null, retReg, source);
 
                 node.List.AddBefore(node, retStoreOp);
             }
             else
             {
-                Operation retCopyOp = new Operation(Instruction.Copy, retReg, source);
+                Operation retCopyOp = Operation(Instruction.Copy, retReg, source);
 
                 node.List.AddBefore(node, retCopyOp);
             }
 
-            operation.SetSources(new Operand[0]);
+            operation.SetSources(Array.Empty<Operand>());
         }
 
         private static void HandleReturnSystemVAbi(LLNode node, Operation operation)
@@ -1126,8 +1128,8 @@ namespace ARMeilleure.CodeGen.X86
                 Operand retLReg = Gpr(CallingConvention.GetIntReturnRegister(),     OperandType.I64);
                 Operand retHReg = Gpr(CallingConvention.GetIntReturnRegisterHigh(), OperandType.I64);
 
-                node.List.AddBefore(node, new Operation(Instruction.VectorExtract, retLReg, source, Const(0)));
-                node.List.AddBefore(node, new Operation(Instruction.VectorExtract, retHReg, source, Const(1)));
+                node.List.AddBefore(node, Operation(Instruction.VectorExtract, retLReg, source, Const(0)));
+                node.List.AddBefore(node, Operation(Instruction.VectorExtract, retHReg, source, Const(1)));
             }
             else
             {
@@ -1135,7 +1137,7 @@ namespace ARMeilleure.CodeGen.X86
                     ? Gpr(CallingConvention.GetIntReturnRegister(), source.Type)
                     : Xmm(CallingConvention.GetVecReturnRegister(), source.Type);
 
-                Operation retCopyOp = new Operation(Instruction.Copy, retReg, source);
+                Operation retCopyOp = Operation(Instruction.Copy, retReg, source);
 
                 node.List.AddBefore(node, retCopyOp);
             }
@@ -1147,7 +1149,7 @@ namespace ARMeilleure.CodeGen.X86
 
             Operand intConst = AddCopy(node, GetIntConst(source));
 
-            Operation copyOp = new Operation(Instruction.VectorCreateScalar, temp, intConst);
+            Operation copyOp = Operation(Instruction.VectorCreateScalar, temp, intConst);
 
             node.List.AddBefore(node, copyOp);
 
@@ -1158,7 +1160,7 @@ namespace ARMeilleure.CodeGen.X86
         {
             Operand temp = Local(source.Type);
 
-            Operation copyOp = new Operation(Instruction.Copy, temp, source);
+            Operation copyOp = Operation(Instruction.Copy, temp, source);
 
             node.List.AddBefore(node, copyOp);
 
