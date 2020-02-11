@@ -21,7 +21,7 @@ namespace ARMeilleure.Instructions
             }
             else
             {
-                context.Return(Const(op.Immediate));
+                EmitTailContinue(context, Const(op.Immediate));
             }
         }
 
@@ -63,7 +63,7 @@ namespace ARMeilleure.Instructions
                 SetFlag(context, PState.TFlag, Const(isThumb ? 0 : 1));
             }
 
-            EmitJumpTableCall(context, Const((int)op.Immediate));
+            EmitCall(context, (ulong)op.Immediate);
         }
 
         public static void Blxr(ArmEmitterContext context)
@@ -85,7 +85,7 @@ namespace ARMeilleure.Instructions
 
             SetFlag(context, PState.TFlag, bitOne);
 
-            EmitJumpTableCall(context, addr);
+            EmitVirtualCall(context, addr);
         }
     }
 }
