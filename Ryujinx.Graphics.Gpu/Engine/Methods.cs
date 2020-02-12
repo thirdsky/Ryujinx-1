@@ -72,7 +72,7 @@ namespace Ryujinx.Graphics.Gpu.Engine
             state.RegisterCallback(MethodOffset.InvalidateTextures,  InvalidateTextures);
             state.RegisterCallback(MethodOffset.TextureBarrierTiled, TextureBarrierTiled);
 
-            state.RegisterCallback(MethodOffset.ResetCounter, ResetCounter);
+            //state.RegisterCallback(MethodOffset.ResetCounter, ResetCounter);
 
             state.RegisterCallback(MethodOffset.DrawEnd,   DrawEnd);
             state.RegisterCallback(MethodOffset.DrawBegin, DrawBegin);
