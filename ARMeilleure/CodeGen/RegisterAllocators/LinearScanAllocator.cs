@@ -28,7 +28,7 @@ namespace ARMeilleure.CodeGen.RegisterAllocators
 
         private LiveInterval[] _parentIntervals;
 
-        private List<LinkedListNode<Node>> _operationNodes;
+        private List<(IntrusiveList<Node>, Node)> _operationNodes;
 
         private int _operationsCount;
 
@@ -592,15 +592,19 @@ namespace ARMeilleure.CodeGen.RegisterAllocators
 
                 int splitPosition = kv.Key;
 
-                LinkedListNode<Node> node = GetOperationNode(splitPosition);
+                (IntrusiveList<Node> nodes, Node node) = GetOperationNode(splitPosition);
 
                 Operation[] sequence = copyResolver.Sequence();
 
-                node = node.List.AddBefore(node, sequence[0]);
+                nodes.AddBefore(node, sequence[0]);
+
+                node = sequence[0];
 
                 for (int index = 1; index < sequence.Length; index++)
                 {
-                    node = node.List.AddAfter(node, sequence[index]);
+                    nodes.AddAfter(node, sequence[index]);
+
+                    node = sequence[index];
                 }
             }
         }
@@ -614,10 +618,8 @@ namespace ARMeilleure.CodeGen.RegisterAllocators
                 return block.Index >= blocksCount;
             }
 
-            for (LinkedListNode<BasicBlock> node = cfg.Blocks.First; node != null; node = node.Next)
+            for (BasicBlock block = cfg.Blocks.First; block != null; block = block.ListNext)
             {
-                BasicBlock block = node.Value;
-
                 if (IsSplitEdgeBlock(block))
                 {
                     continue;
@@ -682,13 +684,17 @@ namespace ARMeilleure.CodeGen.RegisterAllocators
                     }
                     else if (successor.Predecessors.Count == 1)
                     {
-                        LinkedListNode<Node> prependNode = successor.Operations.AddFirst(sequence[0]);
+                        successor.Operations.AddFirst(sequence[0]);
+
+                        Node prependNode = sequence[0];
 
                         for (int index = 1; index < sequence.Length; index++)
                         {
                             Operation operation = sequence[index];
 
-                            prependNode = successor.Operations.AddAfter(prependNode, operation);
+                            successor.Operations.AddAfter(prependNode, operation);
+
+                            prependNode = operation;
                         }
                     }
                     else
@@ -713,7 +719,7 @@ namespace ARMeilleure.CodeGen.RegisterAllocators
             for (int i = usePositions.Count - 1; i >= 0; i--)
             {
                 int usePosition = -usePositions[i];
-                Node operation = GetOperationNode(usePosition).Value;
+                (_, Node operation) = GetOperationNode(usePosition);
 
                 for (int index = 0; index < operation.SourcesCount; index++)
                 {
@@ -747,14 +753,14 @@ namespace ARMeilleure.CodeGen.RegisterAllocators
                 interval.Local.Type);
         }
 
-        private LinkedListNode<Node> GetOperationNode(int position)
+        private (IntrusiveList<Node>, Node) GetOperationNode(int position)
         {
             return _operationNodes[position / InstructionGap];
         }
 
         private void NumberLocals(ControlFlowGraph cfg)
         {
-            _operationNodes = new List<LinkedListNode<Node>>();
+            _operationNodes = new List<(IntrusiveList<Node>, Node)>();
 
             _intervals = new List<LiveInterval>();
 
@@ -772,15 +778,13 @@ namespace ARMeilleure.CodeGen.RegisterAllocators
             {
                 BasicBlock block = cfg.PostOrderBlocks[index];
 
-                for (LinkedListNode<Node> node = block.Operations.First; node != null; node = node.Next)
+                for (Node node = block.Operations.First; node != null; node = node.ListNext)
                 {
-                    _operationNodes.Add(node);
+                    _operationNodes.Add((block.Operations, node));
 
-                    Node operation = node.Value;
-
-                    for (int i = 0; i < operation.DestinationsCount; i++)
+                    for (int i = 0; i < node.DestinationsCount; i++)
                     {
-                        Operand dest = operation.GetDestination(i);
+                        Operand dest = node.GetDestination(i);
                         if (dest.Kind == OperandKind.LocalVariable && visited.Add(dest))
                         {
                             dest.NumberLocal(_intervals.Count);
@@ -795,7 +799,7 @@ namespace ARMeilleure.CodeGen.RegisterAllocators
                 if (block.Operations.Count == 0)
                 {
                     // Pretend we have a dummy instruction on the empty block.
-                    _operationNodes.Add(null);
+                    _operationNodes.Add((null, null));
 
                     _operationsCount += InstructionGap;
                 }
@@ -814,12 +818,12 @@ namespace ARMeilleure.CodeGen.RegisterAllocators
             BitMap[] blkLiveKill = new BitMap[cfg.Blocks.Count];
 
             // Compute local live sets.
-            foreach (BasicBlock block in cfg.Blocks)
+            for (BasicBlock block = cfg.Blocks.First; block != null; block = block.ListNext)
             {
                 BitMap liveGen  = BitMapPool.Allocate(mapSize);
                 BitMap liveKill = BitMapPool.Allocate(mapSize);
 
-                foreach (Node node in block.Operations)
+                for (Node node = block.Operations.First; node != null; node = node.ListNext)
                 {
                     Sources(node, (source) =>
                     {
@@ -989,13 +993,13 @@ namespace ARMeilleure.CodeGen.RegisterAllocators
 
         private static IEnumerable<Node> BottomOperations(BasicBlock block)
         {
-            LinkedListNode<Node> node = block.Operations.Last;
+            Node node = block.Operations.Last;
 
-            while (node != null && !(node.Value is PhiNode))
+            while (node != null && !(node is PhiNode))
             {
-                yield return node.Value;
+                yield return node;
 
-                node = node.Previous;
+                node = node.ListPrevious;
             }
         }
 

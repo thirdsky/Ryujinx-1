@@ -3,8 +3,11 @@ using System.Collections.Generic;
 
 namespace ARMeilleure.IntermediateRepresentation
 {
-    class Node
+    class Node : IIntrusiveListNode<Node>
     {
+        public Node ListPrevious { get; set; }
+        public Node ListNext { get; set; }
+
         public Operand Destination
         {
             get
@@ -60,6 +63,8 @@ namespace ARMeilleure.IntermediateRepresentation
         {
             _clearedDest = true;
             _sources.Clear();
+            ListPrevious = null;
+            ListNext = null;
             Destination = destination;
 
             Resize(_sources, sourcesCount);
@@ -70,6 +75,8 @@ namespace ARMeilleure.IntermediateRepresentation
         {
             _clearedDest = true;
             _sources.Clear();
+            ListPrevious = null;
+            ListNext = null;
             SetDestinations(destinations ?? throw new ArgumentNullException(nameof(destinations)));
 
             Resize(_sources, sourcesCount);

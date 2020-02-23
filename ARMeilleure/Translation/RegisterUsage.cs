@@ -76,9 +76,9 @@ namespace ARMeilleure.Translation
             RegisterMask[] localInputs  = new RegisterMask[cfg.Blocks.Count];
             RegisterMask[] localOutputs = new RegisterMask[cfg.Blocks.Count];
 
-            foreach (BasicBlock block in cfg.Blocks)
+            for (BasicBlock block = cfg.Blocks.First; block != null; block = block.ListNext)
             {
-                foreach (Node node in block.Operations)
+                for (Node node = block.Operations.First; node != null; node = node.ListNext)
                 {
                     Operation operation = node as Operation;
 
@@ -194,13 +194,13 @@ namespace ARMeilleure.Translation
             while (modified);
 
             // Insert load and store context instructions where needed.
-            foreach (BasicBlock block in cfg.Blocks)
+            for (BasicBlock block = cfg.Blocks.First; block != null; block = block.ListNext)
             {
                 bool hasContextLoad = HasContextLoad(block);
 
                 if (hasContextLoad)
                 {
-                    block.Operations.RemoveFirst();
+                    block.Operations.Remove(block.Operations.First);
                 }
 
                 // The only block without any predecessor should be the entry block.
@@ -215,7 +215,7 @@ namespace ARMeilleure.Translation
 
                 if (hasContextStore)
                 {
-                    block.Operations.RemoveLast();
+                    block.Operations.Remove(block.Operations.Last);
                 }
 
                 if (EndsWithReturn(block) || hasContextStore)
@@ -228,7 +228,7 @@ namespace ARMeilleure.Translation
 
         private static bool HasContextLoad(BasicBlock block)
         {
-            return StartsWith(block, Instruction.LoadFromContext) && block.Operations.First.Value.SourcesCount == 0;
+            return StartsWith(block, Instruction.LoadFromContext) && block.Operations.First.SourcesCount == 0;
         }
 
         private static bool HasContextStore(BasicBlock block)
@@ -243,7 +243,7 @@ namespace ARMeilleure.Translation
                 return false;
             }
 
-            return block.Operations.First.Value is Operation operation && operation.Instruction == inst;
+            return block.Operations.First is Operation operation && operation.Instruction == inst;
         }
 
         private static bool EndsWith(BasicBlock block, Instruction inst)
@@ -253,7 +253,7 @@ namespace ARMeilleure.Translation
                 return false;
             }
 
-            return block.Operations.Last.Value is Operation operation && operation.Instruction == inst;
+            return block.Operations.Last is Operation operation && operation.Instruction == inst;
         }
 
         private static RegisterMask GetMask(Register register)
