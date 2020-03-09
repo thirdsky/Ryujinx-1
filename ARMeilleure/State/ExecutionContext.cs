@@ -79,7 +79,7 @@ namespace ARMeilleure.State
 
             Running = true;
 
-            _nativeContext.SetCounter(MinCountForCheck);
+            _nativeContext.SetInterrupt(0);
         }
 
         public ulong GetX(int index)              => _nativeContext.GetX(index);
@@ -98,17 +98,17 @@ namespace ARMeilleure.State
         {
             if (_interrupted)
             {
+                _nativeContext.SetInterrupt(0);
                 _interrupted = false;
 
                 Interrupt?.Invoke(this, EventArgs.Empty);
             }
-
-            _nativeContext.SetCounter(MinCountForCheck);
         }
 
         public void RequestInterrupt()
         {
             _interrupted = true;
+            _nativeContext.SetInterrupt(1);
         }
 
         internal void OnBreak(ulong address, int imm)
@@ -129,7 +129,7 @@ namespace ARMeilleure.State
         public void StopRunning()
         {
             Running = false;
-            _nativeContext.SetCounter(0);
+            _nativeContext.SetInterrupt(1);
         }
 
         public void Dispose()

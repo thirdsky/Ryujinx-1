@@ -133,14 +133,14 @@ namespace ARMeilleure.State
             Marshal.WriteInt32(BasePtr, offset, value ? 1 : 0);
         }
 
-        public int GetCounter()
+        public int GetInterrupt()
         {
-            return Marshal.ReadInt32(BasePtr, GetCounterOffset());
+            return Marshal.ReadInt32(BasePtr, GetInterruptOffset());
         }
 
-        public void SetCounter(int value)
+        public void SetInterrupt(int value)
         {
-            Marshal.WriteInt32(BasePtr, GetCounterOffset(), value);
+            Marshal.WriteInt32(BasePtr, GetInterruptOffset(), value);
         }
 
         public static int GetRegisterOffset(Register reg)
@@ -175,7 +175,7 @@ namespace ARMeilleure.State
             return offset;
         }
 
-        public static int GetCounterOffset()
+        public static int GetInterruptOffset()
         {
             return RegisterConsts.IntRegsCount * IntSize  +
                    RegisterConsts.VecRegsCount * VecSize  +
