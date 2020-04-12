@@ -2,6 +2,7 @@
 using Ryujinx.Common.Logging;
 using Ryujinx.Graphics.GAL;
 using Ryujinx.Graphics.Shader;
+using System;
 
 namespace Ryujinx.Graphics.OpenGL
 {
@@ -95,6 +96,22 @@ namespace Ryujinx.Graphics.OpenGL
         public void ResetCounter(CounterType type)
         {
             _counters.ResetCounter(type);
+        }
+
+        public void BackgroundContextAction(Action action)
+        {
+            OpenTK.Graphics.GraphicsContext backgroundContext = _window.BackgroundContext;
+            lock (backgroundContext)
+            {
+                backgroundContext.MakeCurrent(_window.BackgroundWindow);
+                action();
+                backgroundContext.MakeCurrent(null);
+            }
+        }
+
+        public void InitializeBackgroundContext(OpenTK.Platform.IWindowInfo backgroundWindow)
+        {
+            _window.InitializeBackgroundContext(backgroundWindow);
         }
 
         public void Dispose()

@@ -18,6 +18,11 @@ namespace Ryujinx.Ui
 {
     public class GLRenderer : GLWidget
     {
+        static GLRenderer()
+        {
+            OpenTK.Graphics.GraphicsContext.ShareContexts = true;
+        }
+
         private const int SwitchPanelWidth = 1280;
         private const int SwitchPanelHeight = 720;
         private const int TargetFps = 60;
@@ -307,6 +312,7 @@ namespace Ryujinx.Ui
         public void Render()
         {
             // First take exclusivity on the OpenGL context.
+            _renderer.InitializeBackgroundContext(WindowInfo);
             GraphicsContext.MakeCurrent(WindowInfo);
 
             _renderer.Initialize();
