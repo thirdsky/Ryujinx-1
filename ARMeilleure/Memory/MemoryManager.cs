@@ -57,6 +57,7 @@ namespace ARMeilleure.Memory
 
             Tracking = new MemoryTracking(backingMemory);
             Tracking.VirtualToPhysicalConverter = GetPhysicalRegions;
+            Tracking.VirtualProtect = MarkRegionProtection;
         }
 
         /// <summary>
@@ -454,8 +455,41 @@ namespace ARMeilleure.Memory
             return PteToPa(_pageTable.Read<ulong>((va / PageSize) * PteSize) & ~(0xffffUL << 48)) + (va & PageMask);
         }
 
+        private void MarkRegionProtection(ulong va, ulong size, MemoryProtection protection)
+        {
+            // Protection is inverted on software pages, since the default value is 0.
+            protection = (~protection) & MemoryProtection.ReadAndWrite;
+
+            long tag = (long)protection << 48;
+            ulong endVa = (va + size + PageMask) & ~(ulong)PageMask;
+
+            while (va < endVa)
+            {
+                ref long pageRef = ref _pageTable.GetRef<long>((va >> PageBits) * PteSize);
+
+                long pte;
+
+                do
+                {
+                    pte = Volatile.Read(ref pageRef);
+                }
+                while (Interlocked.CompareExchange(ref pageRef, (pte & ~(0xffffL << 48)) | tag, pte) != pte);
+
+                va += PageSize;
+            }
+        }
+
         private void MarkRegionAsModified(ulong va, ulong size)
         {
+            // We emulate guard pages for software memory access.
+            // Ideally we'd just want to use the host guarded memory, but entering our exception handler
+            // from managed and then calling a managed function would call a native -> managed transition
+            // from a "managed" state, leading to an engine execution exception.
+
+            bool write = true;
+
+            long tag = (write ? 2L : 1L) << 48;
+
             ulong endVa = (va + size + PageMask) & ~(ulong)PageMask;
 
             while (va < endVa)
@@ -468,9 +502,10 @@ namespace ARMeilleure.Memory
                 {
                     pte = Volatile.Read(ref pageRef);
 
-                    if (pte >= 0)
+                    if ((pte & tag) != 0)
                     {
-                        break;
+                        Tracking.VirtualMemoryEvent(va, size, true);
+                        return;
                     }
                 }
                 while (Interlocked.CompareExchange(ref pageRef, pte & ~(0xffffL << 48), pte) != pte);
