@@ -1,25 +1,35 @@
-﻿using System;
+﻿using ARMeilleure.Memory.Range;
+using System;
+using System.Collections.Generic;
 using System.Threading;
 
 namespace ARMeilleure.Memory.Tracking
 {
-    public class RegionHandle : IDisposable
+    public class RegionHandle : IRange, IDisposable
     {
         public bool Dirty { get; private set; } = true;
         public MultiRegionHandle Parent { get; internal set; }
 
-        public ulong Address => _region.Address;
-        public ulong Size => _region.Size;
-        public ulong EndAddress => _region.EndAddress;
+        public ulong Address { get; }
+        public ulong Size { get; }
+        public ulong EndAddress => Address + Size;
 
         private Action _preAction; // Action to perform before a read or write. This will block the memory access.
-        private VirtualRegion _region;
+        private List<VirtualRegion> _regions;
+        private MemoryTracking _tracking;
 
         public MemoryProtection RequiredPermission => _preAction != null ? MemoryProtection.None : (Dirty ? MemoryProtection.ReadAndWrite : MemoryProtection.Read);
 
-        internal RegionHandle(VirtualRegion region)
+        internal RegionHandle(MemoryTracking tracking, ulong address, ulong size)
         {
-            _region = region;
+            Address = address;
+            Size = size;
+            _tracking = tracking;
+            _regions = tracking.GetVirtualRegionsForHandle(address, size);
+            foreach (var region in _regions)
+            {
+                region.Handles.Add(this);
+            }
         }
 
         public void Signal(bool write)
@@ -37,21 +47,49 @@ namespace ARMeilleure.Memory.Tracking
         public void Reprotect()
         {
             Dirty = false;
-            _region.UpdateProtection();
+            lock (_tracking.TrackingLock)
+            {
+                foreach (VirtualRegion region in _regions)
+                {
+                    region.UpdateProtection();
+                }
+            }
         }
 
         public void RegisterAction(Action action)
         {
             Action lastAction = Interlocked.Exchange(ref _preAction, action);
-            if (lastAction == null)
+            if (lastAction == null && action != lastAction)
             {
-                _region.UpdateProtection();
+                lock (_tracking.TrackingLock)
+                {
+                    foreach (VirtualRegion region in _regions)
+                    {
+                        region.UpdateProtection();
+                    }
+                }
             }
+        }
+
+        internal void AddChild(VirtualRegion region)
+        {
+            _regions.Add(region);
+        }
+
+        public bool OverlapsWith(ulong address, ulong size)
+        {
+            return Address < address + size && address < EndAddress;
         }
 
         public void Dispose()
         {
-            _region.RemoveHandle(this);
+            lock (_tracking.TrackingLock)
+            {
+                foreach (VirtualRegion region in _regions)
+                {
+                    region.RemoveHandle(this);
+                }
+            }
         }
     }
 }

@@ -135,24 +135,21 @@ namespace ARMeilleure.Memory.Range
 
             ulong endAddress = address + size;
 
-            lock (_items)
+            foreach (T item in _items)
             {
-                foreach (T item in _items)
+                if (item.Address >= endAddress)
                 {
-                    if (item.Address >= endAddress)
+                    break;
+                }
+
+                if (item.OverlapsWith(address, size))
+                {
+                    if (outputIndex == output.Length)
                     {
-                        break;
+                        Array.Resize(ref output, outputIndex + ArrayGrowthSize);
                     }
 
-                    if (item.OverlapsWith(address, size))
-                    {
-                        if (outputIndex == output.Length)
-                        {
-                            Array.Resize(ref output, outputIndex + ArrayGrowthSize);
-                        }
-
-                        output[outputIndex++] = item;
-                    }
+                    output[outputIndex++] = item;
                 }
             }
 

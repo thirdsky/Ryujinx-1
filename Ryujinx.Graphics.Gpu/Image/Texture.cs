@@ -55,9 +55,14 @@ namespace Ryujinx.Graphics.Gpu.Image
         public LinkedListNode<Texture> CacheNode { get; set; }
 
         /// <summary>
-        /// Event to fire when texture data is modified by the GPU.
+        /// Indicates if the texture is now invalid.
         /// </summary>
-        public event Action<Texture> Modified;
+        public bool Invalidated { get; private set; }
+
+        /// <summary>
+        /// Indicates if the texture has been modified, and needs to be flushed.
+        /// </summary>
+        public bool GpuModified { get; private set; }
 
         /// <summary>
         /// Event to fire when texture data is disposed.
@@ -390,6 +395,12 @@ namespace Ryujinx.Graphics.Gpu.Image
         /// </summary>
         public void Flush()
         {
+            GpuModified = false;
+            if (Info.FormatInfo.Format.IsAstc())
+            {
+                return;
+            }
+
             _context.PhysicalMemory.Write(Address, GetTextureDataFromGpu());
         }
 
@@ -401,11 +412,14 @@ namespace Ryujinx.Graphics.Gpu.Image
         /// </summary>
         public void ExternalFlush()
         {
+            string texInfo = $"{Info.Target} {Info.FormatInfo.Format} {Info.Width}x{Info.Height}x{Info.DepthOrLayers} levels {Info.Levels}";
+            Logger.PrintWarning(LogClass.Gpu, $"Flushing texture {texInfo} at ({Address.ToString("x8")}, {Size.ToString("x8")}");
+
             _context.Renderer.BackgroundContextAction(() =>
             {
                 Flush();
             });
-            _memoryTracking?.Reprotect();
+            _memoryTracking?.Reprotect(); // The texture dirtied itself... try to clear that.
         }
 
         /// <summary>
@@ -991,9 +1005,9 @@ namespace Ryujinx.Graphics.Gpu.Image
         /// </summary>
         public void SignalModified()
         {
+            GpuModified = true;
             if (this != _viewStorage) _viewStorage.SignalModified();
             _memoryTracking?.RegisterAction(ExternalFlush);
-            Modified?.Invoke(this);
         }
 
         /// <summary>
@@ -1087,6 +1101,28 @@ namespace Ryujinx.Graphics.Gpu.Image
         {
             DisposeTextures();
             _memoryTracking?.Dispose();
+        }
+
+        public void MemoryUnmapped()
+        {
+            RegionHandle tracking = _memoryTracking;
+            _memoryTracking = null;
+            tracking?.RegisterAction(null);
+            tracking?.Dispose();
+
+            if (GpuModified)
+            {
+                // This callback is executed right before the unmap happens. We flush the texture now to cover any case where
+                // it might be used in future, if a game were expecting the data to still be there.
+                ExternalFlush();
+            }
+
+            Invalidated = true;
+
+            if (_viewStorage != this)
+            {
+                _viewStorage.MemoryUnmapped();
+            }
         }
     }
 }

@@ -60,7 +60,7 @@ namespace ARMeilleure.Memory.Tracking
                         modifiedAction(rgStart, rgSize);
                         rgSize = 0;
                     }
-                    rgStart = handle.Address + handle.Size;
+                    rgStart = handle.EndAddress;
                 }
             }
 
@@ -96,7 +96,7 @@ namespace ARMeilleure.Memory.Tracking
                         modifiedAction(rgStart, rgSize);
                         rgSize = 0;
                     }
-                    rgStart = handle.Address + handle.Size;
+                    rgStart = handle.EndAddress;
                 }
             }
 
@@ -104,13 +104,6 @@ namespace ARMeilleure.Memory.Tracking
             {
                 modifiedAction(rgStart, rgSize);
             }
-
-            /*
-            if (address != Address || Size != size)
-            {
-                Dirty |= CalculateDirty();
-            }
-            */
         }
 
         public bool CalculateDirty()

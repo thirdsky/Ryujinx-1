@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using ARMeilleure.Memory.Range;
+using System.Collections.Generic;
 
 namespace ARMeilleure.Memory.Tracking
 {
@@ -47,13 +48,17 @@ namespace ARMeilleure.Memory.Tracking
             }
         }
 
-        public PhysicalRegion Split(ulong splitAddress)
+        public override INonOverlappingRange Split(ulong splitAddress)
         {
             PhysicalRegion newRegion = new PhysicalRegion(Tracking, splitAddress, EndAddress - splitAddress);
             Size = splitAddress - Address;
 
             // The new region inherits all of our parents.
             newRegion.VirtualParents = new List<VirtualRegion>(VirtualParents);
+            foreach (var parent in VirtualParents)
+            {
+                parent.AddChild(newRegion);
+            }
 
             return newRegion;
         }

@@ -47,20 +47,6 @@ namespace Ryujinx.Graphics.Gpu.Memory
         }
 
         /// <summary>
-        /// Checks if a specified virtual memory region has been modified by the CPU since the last call.
-        /// </summary>
-        /// <param name="address">CPU virtual address of the region</param>
-        /// <param name="size">Size of the region</param>
-        /// <param name="name">Resource name</param>
-        /// <param name="modifiedRanges">Optional array where the modified ranges should be written</param>
-        /// <returns>The number of modified ranges</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int QueryModified(ulong address, ulong size, ResourceName name, (ulong, ulong)[] modifiedRanges = null)
-        {
-            return _cpuMemory.QueryModified(address, size, (int)name, modifiedRanges);
-        }
-
-        /// <summary>
         /// Obtains a memory tracking handle for the given virtual region. This should be disposed when finished with.
         /// </summary>
         /// <param name="address">CPU virtual address of the region</param>

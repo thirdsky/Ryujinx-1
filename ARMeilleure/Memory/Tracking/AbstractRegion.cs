@@ -2,7 +2,7 @@
 
 namespace ARMeilleure.Memory.Tracking
 {
-    abstract class AbstractRegion : IRange
+    abstract class AbstractRegion : INonOverlappingRange
     {
         public ulong Address { get; }
         public ulong Size { get; protected set; }
@@ -18,5 +18,7 @@ namespace ARMeilleure.Memory.Tracking
         {
             return Address < address + size && address < EndAddress;
         }
+
+        public abstract INonOverlappingRange Split(ulong splitAddress);
     }
 }

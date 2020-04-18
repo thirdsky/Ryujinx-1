@@ -7,6 +7,7 @@ namespace ARMeilleure.Memory.Range
     {
         ulong Address { get; }
         ulong Size    { get; }
+        ulong EndAddress { get; }
 
         bool OverlapsWith(ulong address, ulong size);
     }

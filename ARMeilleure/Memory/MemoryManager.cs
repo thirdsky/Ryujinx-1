@@ -138,7 +138,7 @@ namespace ARMeilleure.Memory
         /// <param name="data">Data to be written</param>
         public void Write(ulong va, ReadOnlySpan<byte> data)
         {
-            MarkRegionAsModified(va, (ulong)data.Length);
+            MarkRegionAsModified(va, (ulong)data.Length, true);
 
             if (IsContiguous(va, data.Length))
             {
@@ -212,7 +212,7 @@ namespace ARMeilleure.Memory
                 ThrowMemoryNotContiguousException();
             }
 
-            MarkRegionAsModified(va, (ulong)Unsafe.SizeOf<T>());
+            MarkRegionAsModified(va, (ulong)Unsafe.SizeOf<T>(), true);
 
             return ref _backingMemory.GetRef<T>(GetPhysicalAddressInternal(va));
         }
@@ -222,7 +222,7 @@ namespace ARMeilleure.Memory
         // TODO: Remove that once we have proper 8-bits and 16-bits CAS.
         public ref T GetRefNoChecks<T>(ulong va) where T : unmanaged
         {
-            MarkRegionAsModified(va, (ulong)Unsafe.SizeOf<T>());
+            MarkRegionAsModified(va, (ulong)Unsafe.SizeOf<T>(), true);
 
             return ref _backingMemory.GetRef<T>(GetPhysicalAddressInternal(va));
         }
@@ -304,6 +304,7 @@ namespace ARMeilleure.Memory
 
         private void ReadImpl(ulong va, Span<byte> data)
         {
+            MarkRegionAsModified(va, (ulong)data.Length, false);
             int offset = 0, size;
 
             if ((va & PageMask) != 0)
@@ -325,99 +326,6 @@ namespace ARMeilleure.Memory
 
                 _backingMemory.GetSpan(pa, size).CopyTo(data.Slice(offset, size));
             }
-        }
-
-        /// <summary>
-        /// Checks if a specified virtual memory region has been modified by the CPU since the last call.
-        /// </summary>
-        /// <param name="va">Virtual address of the region</param>
-        /// <param name="size">Size of the region</param>
-        /// <param name="id">Resource identifier number (maximum is 15)</param>
-        /// <param name="modifiedRanges">Optional array where the modified ranges should be written</param>
-        /// <returns>The number of modified ranges</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int QueryModified(ulong va, ulong size, int id, (ulong, ulong)[] modifiedRanges = null)
-        {
-            if (!ValidateAddress(va))
-            {
-                return 0;
-            }
-
-            ulong maxSize = _addressSpaceSize - va;
-
-            if (size > maxSize)
-            {
-                size = maxSize;
-            }
-
-            // We need to ensure that the tagged pointer value is negative,
-            // JIT generated code checks that to take the slow paths and call the MemoryManager Read/Write methods.
-            long tag = (0x8000L | (1L << id)) << 48;
-
-            ulong endVa = (va + size + PageMask) & ~(ulong)PageMask;
-
-            va &= ~(ulong)PageMask;
-
-            ulong rgStart = va;
-            ulong rgSize = 0;
-
-            int rangeIndex = 0;
-
-            unsafe
-            {
-                long* pagePtr = (long*)_pageTable.Pointer + (va >> PageBits);
-
-                for (; va < endVa; va += PageSize, pagePtr++)
-                {
-                    while (true)
-                    {
-                        long pte = *pagePtr;
-
-                        if ((pte & tag) == tag)
-                        {
-                            if (rgSize != 0)
-                            {
-                                if (modifiedRanges != null && rangeIndex < modifiedRanges.Length)
-                                {
-                                    modifiedRanges[rangeIndex] = (rgStart, rgSize);
-                                }
-
-                                rangeIndex++;
-
-                                rgSize = 0;
-                            }
-
-                            break;
-                        }
-                        else
-                        {
-                            if (Interlocked.CompareExchange(ref *pagePtr, pte | tag, pte) == pte)
-                            {
-                                if (rgSize == 0)
-                                {
-                                    rgStart = va;
-                                }
-
-                                rgSize += PageSize;
-
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (rgSize != 0)
-            {
-                if (modifiedRanges != null && rangeIndex < modifiedRanges.Length)
-                {
-                    modifiedRanges[rangeIndex] = (rgStart, rgSize);
-                }
-
-                rangeIndex++;
-            }
-
-            return rangeIndex;
         }
 
         /// <summary>
@@ -479,14 +387,12 @@ namespace ARMeilleure.Memory
             }
         }
 
-        private void MarkRegionAsModified(ulong va, ulong size)
+        private void MarkRegionAsModified(ulong va, ulong size, bool write)
         {
             // We emulate guard pages for software memory access.
             // Ideally we'd just want to use the host guarded memory, but entering our exception handler
             // from managed and then calling a managed function would call a native -> managed transition
             // from a "managed" state, leading to an engine execution exception.
-
-            bool write = true;
 
             long tag = (write ? 2L : 1L) << 48;
 

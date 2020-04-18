@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using ARMeilleure.Memory.Range;
+using System.Collections.Generic;
 
 namespace ARMeilleure.Memory.Tracking
 {
@@ -13,12 +14,34 @@ namespace ARMeilleure.Memory.Tracking
         {
             Tracking = tracking;
 
-            PhysicalChildren = tracking.GetPhysicalRegionsForVirtual(address, size);
+            UpdatePhysicalChildren();
+        }
+
+        public void ClearPhysicalChildren()
+        {
+            if (PhysicalChildren != null)
+            {
+                foreach (PhysicalRegion child in PhysicalChildren)
+                {
+                    child.RemoveParent(this);
+                }
+            }
+        }
+
+        public void UpdatePhysicalChildren()
+        {
+            PhysicalChildren = Tracking.GetPhysicalRegionsForVirtual(Address, Size);
 
             foreach (PhysicalRegion child in PhysicalChildren)
             {
                 child.VirtualParents.Add(this);
             }
+        }
+
+        public void RecalculatePhysicalChildren()
+        {
+            ClearPhysicalChildren();
+            UpdatePhysicalChildren();
         }
 
         public void Signal(bool write)
@@ -61,16 +84,6 @@ namespace ARMeilleure.Memory.Tracking
             }
         }
 
-        public RegionHandle NewHandle()
-        {
-            // Assumes the tracking lock has already been obtained.
-            // Handles start as dirty and with no action, so protection does not need to be updated.
-
-            RegionHandle handle = new RegionHandle(this);
-            Handles.Add(handle);
-            return handle;
-        }
-
         public void RemoveHandle(RegionHandle handle)
         {
             bool removedRegions = false;
@@ -98,6 +111,28 @@ namespace ARMeilleure.Memory.Tracking
                     }
                 }
             }
+        }
+
+        public void AddChild(PhysicalRegion region)
+        {
+            PhysicalChildren.Add(region);
+        }
+
+        public override INonOverlappingRange Split(ulong splitAddress)
+        {
+            ClearPhysicalChildren();
+            VirtualRegion newRegion = new VirtualRegion(Tracking, splitAddress, EndAddress - splitAddress);
+            Size = splitAddress - Address;
+            UpdatePhysicalChildren();
+
+            // The new region inherits all of our parents.
+            newRegion.Handles = new List<RegionHandle>(Handles);
+            foreach (var parent in Handles)
+            {
+                parent.AddChild(newRegion);
+            }
+
+            return newRegion;
         }
     }
 }
