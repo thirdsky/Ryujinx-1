@@ -50,7 +50,7 @@ namespace Ryujinx.Graphics.Gpu.Image
         private bool _rebind;
 
         private float[] _scales;
-        private bool[] _cpScaleExempt;
+        private bool[] _cpInterpolateScale;
         private bool _scaleChanged;
 
         public bool ScaleCompute { get; private set; }
@@ -76,7 +76,7 @@ namespace Ryujinx.Graphics.Gpu.Image
             _imageState   = new TextureStatePerStage[stages][];
 
             _scales = new float[64];
-            _cpScaleExempt = new bool[64];
+            _cpInterpolateScale = new bool[64];
 
             for (int i = 0; i < 64; i++)
             {
@@ -228,7 +228,7 @@ namespace Ryujinx.Graphics.Gpu.Image
                     hasOutputMatch = true;
                 }
 
-                _cpScaleExempt[textureBindingsCount + index] = scaleExempt;
+                _cpInterpolateScale[textureBindingsCount + index] = scaleExempt;
             }
 
             if (!hasOutputMatch)
@@ -253,8 +253,8 @@ namespace Ryujinx.Graphics.Gpu.Image
 
                 Texture texture = pool.Get(UnpackTextureId(packedId));
 
-                float xDivisor = BitUtils.AlignUp(width, _cpThreadsX) / (float)texture.Info.Width;
-                float yDivisor = BitUtils.AlignUp(height, _cpThreadsY) / (float)texture.Info.Height;
+                float xDivisor = width / (float)BitUtils.AlignUp(texture.Info.Width, _cpThreadsX);
+                float yDivisor = height / (float)BitUtils.AlignUp(texture.Info.Height, _cpThreadsY);
 
                 bool scaleExempt = false;
 
@@ -275,7 +275,7 @@ namespace Ryujinx.Graphics.Gpu.Image
                     }
                 }
 
-                _cpScaleExempt[index] = scaleExempt;
+                _cpInterpolateScale[index] = scaleExempt;
             }
 
             if (fullSizeTextures < 1 && scaledTextures < 2)
@@ -329,17 +329,19 @@ namespace Ryujinx.Graphics.Gpu.Image
                     case ShaderStage.Compute:
                         // Texture scale can be ignored in compute, depending on if compute scaling has been enabled, and the texture is one that meets the heuristic.
 
-                        if (ScaleCompute && _cpScaleExempt[index])
+                        if (ScaleCompute && _cpInterpolateScale[index])
                         {
+                            changed = texture.ScaleFactor != GraphicsConfig.ResScale;
                             texture.SetScale(GraphicsConfig.ResScale);
-                            changed = true;
+                            result = -texture.ScaleFactor; // Enable interpolation based on compute invocation ID.
+
                             break;
                         }
 
                         if ((binding.Flags & TextureUsageFlags.ResScaleUnsupported) != 0)
                         {
+                            changed = texture.ScaleFactor != 1f;
                             texture.BlacklistScale();
-                            changed = true;
                         }
 
                         result = texture.ScaleFactor;

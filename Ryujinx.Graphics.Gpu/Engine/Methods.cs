@@ -372,7 +372,7 @@ namespace Ryujinx.Graphics.Gpu.Engine
             if (changedScale)
             {
                 TextureManager.UpdateRenderTargetScale(singleUse);
-                _context.Renderer.Pipeline.SetRenderTargetScale(TextureManager.RenderTargetScale);
+                _context.Renderer.Pipeline.SetRenderTargetScale(ShaderStage.Fragment, TextureManager.RenderTargetScale);
 
                 UpdateViewportTransform(state);
                 UpdateScissorState(state);

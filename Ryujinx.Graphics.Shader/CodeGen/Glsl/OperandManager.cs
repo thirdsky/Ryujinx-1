@@ -52,12 +52,12 @@ namespace Ryujinx.Graphics.Shader.CodeGen.Glsl
 
             // Special.
             { AttributeConsts.FragmentOutputDepth, new BuiltInAttribute("gl_FragDepth",                           VariableType.F32) },
-            { AttributeConsts.ThreadIdX,           new BuiltInAttribute("gl_LocalInvocationID.x",                 VariableType.U32) },
-            { AttributeConsts.ThreadIdY,           new BuiltInAttribute("gl_LocalInvocationID.y",                 VariableType.U32) },
-            { AttributeConsts.ThreadIdZ,           new BuiltInAttribute("gl_LocalInvocationID.z",                 VariableType.U32) },
-            { AttributeConsts.CtaIdX,              new BuiltInAttribute("gl_WorkGroupID.x",                       VariableType.U32) },
-            { AttributeConsts.CtaIdY,              new BuiltInAttribute("gl_WorkGroupID.y",                       VariableType.U32) },
-            { AttributeConsts.CtaIdZ,              new BuiltInAttribute("gl_WorkGroupID.z",                       VariableType.U32) },
+            { AttributeConsts.ThreadIdX,           new BuiltInAttribute("Helper_LocalInvocationID().x",                 VariableType.U32) },
+            { AttributeConsts.ThreadIdY,           new BuiltInAttribute("Helper_LocalInvocationID().y",                 VariableType.U32) },
+            { AttributeConsts.ThreadIdZ,           new BuiltInAttribute("Helper_LocalInvocationID().z",                 VariableType.U32) },
+            { AttributeConsts.CtaIdX,              new BuiltInAttribute("Helper_WorkGroupID().x",                       VariableType.U32) },
+            { AttributeConsts.CtaIdY,              new BuiltInAttribute("Helper_WorkGroupID().y",                       VariableType.U32) },
+            { AttributeConsts.CtaIdZ,              new BuiltInAttribute("Helper_WorkGroupID().z",                       VariableType.U32) },
             { AttributeConsts.LaneId,              new BuiltInAttribute("gl_SubGroupInvocationARB",               VariableType.U32) },
             { AttributeConsts.EqMask,              new BuiltInAttribute("unpackUint2x32(gl_SubGroupEqMaskARB).x", VariableType.U32) },
             { AttributeConsts.GeMask,              new BuiltInAttribute("unpackUint2x32(gl_SubGroupGeMaskARB).x", VariableType.U32) },

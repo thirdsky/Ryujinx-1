@@ -56,7 +56,7 @@ namespace Ryujinx.Graphics.GAL
 
         void SetRasterizerDiscard(bool discard);
 
-        void SetRenderTargetScale(float scale);
+        void SetRenderTargetScale(ShaderStage stage, float scale);
 
         void SetRenderTargetColorMasks(ReadOnlySpan<uint> componentMask);
 

@@ -159,6 +159,7 @@ namespace Ryujinx.Graphics.Gpu.Engine
             TextureManager.CommitComputeBindings(qmd.CtaRasterWidth, qmd.CtaRasterHeight, qmd.CtaRasterDepth, qmd.CtaThreadDimension0, qmd.CtaThreadDimension1, qmd.CtaThreadDimension2);
 
             float scale = TextureManager.ComputeScale;
+            _context.Renderer.Pipeline.SetRenderTargetScale(ShaderStage.Compute, scale);
 
             _context.Renderer.Pipeline.DispatchCompute(
                 (int)Math.Ceiling(qmd.CtaRasterWidth * scale),

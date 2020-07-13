@@ -32,7 +32,7 @@ namespace Ryujinx.Graphics.OpenGL
         private int _boundReadFramebuffer;
 
         private float[] _fpRenderScale = new float[65];
-        private float[] _cpRenderScale = new float[64];
+        private float[] _cpRenderScale = new float[65];
 
         private TextureBase _unit0Texture;
 
@@ -713,7 +713,7 @@ namespace Ryujinx.Graphics.OpenGL
             _program = (Program)program;
             _program.Bind();
 
-            SetRenderTargetScale(_fpRenderScale[0]);
+            SetRenderTargetScale(ShaderStage.Fragment, _fpRenderScale[0]);
         }
 
         public void SetRasterizerDiscard(bool discard)
@@ -730,13 +730,31 @@ namespace Ryujinx.Graphics.OpenGL
             _rasterizerDiscard = discard;
         }
 
-        public void SetRenderTargetScale(float scale)
+        public void SetRenderTargetScale(ShaderStage stage, float scale)
         {
             _fpRenderScale[0] = scale;
 
-            if (_program != null && _program.FragmentRenderScaleUniform != -1)
+            if (_program != null )
             {
-                GL.Uniform1(_program.FragmentRenderScaleUniform, 1, _fpRenderScale); // Just the first element.
+                switch (stage)
+                {
+                    case ShaderStage.Fragment:
+                        _fpRenderScale[0] = scale;
+                        if (_program.FragmentRenderScaleUniform != -1)
+                        {
+                            GL.Uniform1(_program.FragmentRenderScaleUniform, 1, _fpRenderScale); // Just the first element.
+                        }
+                        break;
+
+                    case ShaderStage.Compute:
+                        _cpRenderScale[0] = scale;
+                        if (_program.ComputeRenderScaleUniform != -1)
+                        {
+                            GL.Uniform1(_program.ComputeRenderScaleUniform, 1, _cpRenderScale); // Just the first element.
+                        }
+                        break;
+                }
+                
             }
         }
 
@@ -1146,8 +1164,8 @@ namespace Ryujinx.Graphics.OpenGL
                     case ShaderStage.Compute:
                         if (_program.ComputeRenderScaleUniform != -1)
                         {
-                            Array.Copy(scales, 0, _cpRenderScale, 0, textureCount + imageCount);
-                            GL.Uniform1(_program.ComputeRenderScaleUniform, textureCount + imageCount, _cpRenderScale);
+                            Array.Copy(scales, 0, _cpRenderScale, 1, textureCount + imageCount);
+                            GL.Uniform1(_program.ComputeRenderScaleUniform, 1 + textureCount + imageCount, _cpRenderScale);
                         }
                         break;
                 }
