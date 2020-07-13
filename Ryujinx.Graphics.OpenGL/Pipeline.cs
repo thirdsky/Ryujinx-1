@@ -732,8 +732,6 @@ namespace Ryujinx.Graphics.OpenGL
 
         public void SetRenderTargetScale(ShaderStage stage, float scale)
         {
-            _fpRenderScale[0] = scale;
-
             if (_program != null )
             {
                 switch (stage)
