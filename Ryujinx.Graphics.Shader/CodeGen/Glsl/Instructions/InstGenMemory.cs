@@ -53,20 +53,20 @@ namespace Ryujinx.Graphics.Shader.CodeGen.Glsl.Instructions
                 TextureUsageFlags flags = TextureUsageFlags.NeedsScaleValue;
 
                 if ((context.Config.Stage == ShaderStage.Fragment || context.Config.Stage == ShaderStage.Compute) &&
-                    texOp.Inst == Instruction.ImageLoad &&
                     !isBindless &&
                     !isIndexed &&
                     pCount == 2)
                 {
                     // Image scales start after texture ones.
                     vector = "Helper_TexelFetchScale(" + vector + ", " + (context.TextureDescriptors.Count + index) + ")";
-                }
-                else
-                {
-                    // Resolution scaling cannot be applied to this image right now.
-                    // Flag so that we know to blacklist scaling on related textures when binding them.
 
-                    flags |= TextureUsageFlags.ResScaleUnsupported;
+                    if (texOp.Inst != Instruction.ImageLoad)
+                    {
+                        // Resolution scaling cannot be applied to this image except when compute is being scaled.
+                        // Flag so that we know to blacklist scaling on related textures when binding them.
+
+                        flags |= TextureUsageFlags.ResScaleUnsupported;
+                    }
                 }
 
                 context.ImageDescriptors[index] = context.ImageDescriptors[index].SetFlag(flags);
