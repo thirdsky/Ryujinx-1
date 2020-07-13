@@ -297,7 +297,7 @@ namespace Ryujinx.Graphics.Gpu.Image
         /// The number of compute groups is passed to better inform when compute scaling should be performed.
         /// </summary>
         /// <param name="groupsX">Number of x compute groups</param>
-        public void CommitComputeBindings(int groupsX, int groupsY, int groupsZ)
+        public void CommitComputeBindings(int groupsX, int groupsY, int groupsZ, int threadsX, int threadsY, int threadsZ)
         {
             // Every time we switch between graphics and compute work,
             // we must rebind everything.

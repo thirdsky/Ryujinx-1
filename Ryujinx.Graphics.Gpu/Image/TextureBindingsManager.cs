@@ -1,3 +1,4 @@
+using Ryujinx.Common;
 using Ryujinx.Graphics.GAL;
 using Ryujinx.Graphics.Gpu.State;
 using Ryujinx.Graphics.Shader;
@@ -19,6 +20,9 @@ namespace Ryujinx.Graphics.Gpu.Image
         private int _cpGroupsX;
         private int _cpGroupsY;
         private int _cpGroupsZ;
+        private int _cpThreadsX;
+        private int _cpThreadsY;
+        private int _cpThreadsZ;
 
         private SamplerPool _samplerPool;
 
@@ -87,11 +91,15 @@ namespace Ryujinx.Graphics.Gpu.Image
         /// <param name="groupsX"></param>
         /// <param name="groupsY"></param>
         /// <param name="groupsZ"></param>
-        public void SetComputeSize(int groupsX, int groupsY, int groupsZ)
+        public void SetComputeSize(int groupsX, int groupsY, int groupsZ, int threadsX, int threadsY, int threadsZ)
         {
             _cpGroupsX = groupsX;
             _cpGroupsY = groupsY;
             _cpGroupsZ = groupsZ;
+
+            _cpThreadsX = threadsX;
+            _cpThreadsY = threadsY;
+            _cpThreadsZ = threadsZ;
         }
 
         /// <summary>
@@ -177,14 +185,14 @@ namespace Ryujinx.Graphics.Gpu.Image
             // - The dimensions of one input texture must match the number of compute invocations.
             // - The dimensions of _at least_ two input textures must have dimensions an integer scale equal or lower than the target output resolution.
 
-            if (_cpGroupsZ != 1)
+            if (_cpGroupsZ * _cpThreadsZ != 1)
             {
                 // Can only scale compute for 2D invocations.
                 return false;
             }
 
-            int width = _cpGroupsX * 16;
-            int height = _cpGroupsY * 16;
+            int width = _cpGroupsX * _cpThreadsX;
+            int height = _cpGroupsY * _cpThreadsY;
 
             int textureBindingsCount = _textureBindings[0]?.Length ?? 0;
 
@@ -212,7 +220,9 @@ namespace Ryujinx.Graphics.Gpu.Image
 
                 bool scaleExempt = false;
 
-                if (texture.Info.Width == width && texture.Info.Height == height && texture.ScaleMode != TextureScaleMode.Blacklisted)
+                
+
+                if (BitUtils.AlignUp(texture.Info.Width, _cpThreadsX) == width && BitUtils.AlignUp(texture.Info.Height, _cpThreadsY) == height && texture.ScaleMode != TextureScaleMode.Blacklisted)
                 {
                     scaleExempt = true;
                     hasOutputMatch = true;
@@ -243,8 +253,8 @@ namespace Ryujinx.Graphics.Gpu.Image
 
                 Texture texture = pool.Get(UnpackTextureId(packedId));
 
-                float xDivisor = width / texture.Info.Width;
-                float yDivisor = height / texture.Info.Height;
+                float xDivisor = BitUtils.AlignUp(width, _cpThreadsX) / texture.Info.Width;
+                float yDivisor = BitUtils.AlignUp(height, _cpThreadsY) / texture.Info.Height;
 
                 bool scaleExempt = false;
 
