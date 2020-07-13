@@ -47,6 +47,32 @@ namespace Ryujinx.Graphics.Shader.CodeGen.Glsl.Instructions
                 texCall += ", " + str;
             }
 
+            string ApplyScaling(string vector)
+            {
+                int index = context.FindImageDescriptorIndex(texOp);
+                TextureUsageFlags flags = TextureUsageFlags.NeedsScaleValue;
+
+                if ((context.Config.Stage == ShaderStage.Fragment || context.Config.Stage == ShaderStage.Compute) &&
+                    texOp.Inst == Instruction.ImageLoad &&
+                    !isBindless &&
+                    !isIndexed &&
+                    pCount == 2)
+                {
+                    // Image scales start after texture ones.
+                    vector = "Helper_TexelFetchScale(" + vector + ", " + (context.TextureDescriptors.Count + index) + ")";
+                }
+                else
+                {
+                    // Resolution scaling cannot be applied to this image right now.
+                    // Flag so that we know to blacklist scaling on related textures when binding them.
+
+                    flags |= TextureUsageFlags.ResScaleUnsupported;
+                }
+
+                context.ImageDescriptors[index] = context.ImageDescriptors[index].SetFlag(flags);
+                return vector;
+            }
+
             if (pCount > 1)
             {
                 string[] elems = new string[pCount];
@@ -56,7 +82,7 @@ namespace Ryujinx.Graphics.Shader.CodeGen.Glsl.Instructions
                     elems[index] = Src(VariableType.S32);
                 }
 
-                Append("ivec" + pCount + "(" + string.Join(", ", elems) + ")");
+                Append(ApplyScaling("ivec" + pCount + "(" + string.Join(", ", elems) + ")"));
             }
             else
             {
@@ -395,23 +421,24 @@ namespace Ryujinx.Graphics.Shader.CodeGen.Glsl.Instructions
                 if (intCoords)
                 {
                     int index = context.FindTextureDescriptorIndex(texOp);
+                    TextureUsageFlags flags = TextureUsageFlags.NeedsScaleValue;
 
                     if ((context.Config.Stage == ShaderStage.Fragment || context.Config.Stage == ShaderStage.Compute) &&
-                        (texOp.Flags & TextureFlags.Bindless) == 0 &&
-                        texOp.Type != SamplerType.Indexed &&
+                        !isBindless &&
+                        !isIndexed &&
                         pCount == 2)
                     {
-                        return "Helper_TexelFetchScale(" + vector + ", " + index + ")";
+                        vector = "Helper_TexelFetchScale(" + vector + ", " + index + ")";
                     }
                     else
                     {
                         // Resolution scaling cannot be applied to this texture right now.
                         // Flag so that we know to blacklist scaling on related textures when binding them.
 
-                        TextureDescriptor descriptor = context.TextureDescriptors[index];
-                        descriptor.Flags |= TextureUsageFlags.ResScaleUnsupported;
-                        context.TextureDescriptors[index] = descriptor;
+                        flags |= TextureUsageFlags.ResScaleUnsupported;
                     }
+
+                    context.TextureDescriptors[index] = context.TextureDescriptors[index].SetFlag(flags);
                 }
 
                 return vector;

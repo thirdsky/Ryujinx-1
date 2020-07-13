@@ -45,6 +45,11 @@ namespace Ryujinx.Graphics.Gpu.Image
         public float RenderTargetScale { get; private set; } = 1f;
 
         /// <summary>
+        /// The scaling factor applied to compute invocations.
+        /// </summary>
+        public float ComputeScale { get; private set; } = 1f;
+
+        /// <summary>
         /// Constructs a new instance of the texture manager.
         /// </summary>
         /// <param name="context">The GPU context that the texture manager belongs to</param>
@@ -184,6 +189,11 @@ namespace Ryujinx.Graphics.Gpu.Image
             return changesScale || (hasValue && color.ScaleMode != TextureScaleMode.Blacklisted && color.ScaleFactor != GraphicsConfig.ResScale);
         }
 
+        public Texture GetAnyRenderTarget()
+        {
+            return _rtColors[0] ?? _rtDepthStencil;
+        }
+
         /// <summary>
         /// Updates the Render Target scale, given the currently bound render targets.
         /// This will update scale to match the configured scale, scale textures that are eligible but not scaled,
@@ -284,16 +294,21 @@ namespace Ryujinx.Graphics.Gpu.Image
 
         /// <summary>
         /// Commits bindings on the compute pipeline.
+        /// The number of compute groups is passed to better inform when compute scaling should be performed.
         /// </summary>
-        public void CommitComputeBindings()
+        /// <param name="groupsX">Number of x compute groups</param>
+        public void CommitComputeBindings(int groupsX, int groupsY, int groupsZ)
         {
             // Every time we switch between graphics and compute work,
             // we must rebind everything.
             // Since compute work happens less often, we always do that
             // before and after the compute dispatch.
             _cpBindingsManager.Rebind();
+            _cpBindingsManager.SetComputeSize(groupsX, groupsY, groupsZ);
             _cpBindingsManager.CommitBindings();
             _gpBindingsManager.Rebind();
+
+            ComputeScale = _cpBindingsManager.ScaleCompute ? GraphicsConfig.ResScale : 1f;
         }
 
         /// <summary>

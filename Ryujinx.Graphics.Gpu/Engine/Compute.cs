@@ -156,12 +156,14 @@ namespace Ryujinx.Graphics.Gpu.Engine
             TextureManager.SetComputeImages(imageBindings);
 
             BufferManager.CommitComputeBindings();
-            TextureManager.CommitComputeBindings();
+            TextureManager.CommitComputeBindings(qmd.CtaRasterWidth, qmd.CtaRasterHeight, qmd.CtaRasterDepth);
+
+            float scale = TextureManager.ComputeScale;
 
             _context.Renderer.Pipeline.DispatchCompute(
-                qmd.CtaRasterWidth,
-                qmd.CtaRasterHeight,
-                qmd.CtaRasterDepth);
+                (int)Math.Ceiling(qmd.CtaRasterWidth * scale),
+                (int)Math.Ceiling(qmd.CtaRasterHeight * scale),
+                (int)Math.Ceiling(qmd.CtaRasterDepth * scale));
 
             _forceShaderUpdate = true;
         }

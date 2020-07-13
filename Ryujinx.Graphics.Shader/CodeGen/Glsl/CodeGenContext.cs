@@ -92,6 +92,21 @@ namespace Ryujinx.Graphics.Shader.CodeGen.Glsl
                 descriptor.CbufOffset == cBufOffset);
         }
 
+        public int FindImageDescriptorIndex(AstTextureOperation texOp)
+        {
+            AstOperand operand = texOp.GetSource(0) as AstOperand;
+            bool bindless = (texOp.Flags & TextureFlags.Bindless) > 0;
+
+            int cBufSlot = bindless ? operand.CbufSlot : 0;
+            int cBufOffset = bindless ? operand.CbufOffset : 0;
+
+            return ImageDescriptors.FindIndex(descriptor =>
+                descriptor.Type == texOp.Type &&
+                descriptor.HandleIndex == texOp.Handle &&
+                descriptor.CbufSlot == cBufSlot &&
+                descriptor.CbufOffset == cBufOffset);
+        }
+
         private void UpdateIndentation()
         {
             _indentation = GetIndentation(_level);

@@ -42,5 +42,12 @@ namespace Ryujinx.Graphics.Shader
 
             Flags = TextureUsageFlags.None;
         }
+
+        public TextureDescriptor SetFlag(TextureUsageFlags flag)
+        {
+            Flags |= flag;
+
+            return this;
+        }
     }
 }
