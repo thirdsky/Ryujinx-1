@@ -304,7 +304,7 @@ namespace Ryujinx.Graphics.Gpu.Image
             // Since compute work happens less often, we always do that
             // before and after the compute dispatch.
             _cpBindingsManager.Rebind();
-            _cpBindingsManager.SetComputeSize(groupsX, groupsY, groupsZ);
+            _cpBindingsManager.SetComputeSize(groupsX, groupsY, groupsZ, threadsX, threadsY, threadsZ);
             _cpBindingsManager.CommitBindings();
             _gpBindingsManager.Rebind();
 
