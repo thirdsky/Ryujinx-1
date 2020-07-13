@@ -253,8 +253,8 @@ namespace Ryujinx.Graphics.Gpu.Image
 
                 Texture texture = pool.Get(UnpackTextureId(packedId));
 
-                float xDivisor = BitUtils.AlignUp(width, _cpThreadsX) / texture.Info.Width;
-                float yDivisor = BitUtils.AlignUp(height, _cpThreadsY) / texture.Info.Height;
+                float xDivisor = BitUtils.AlignUp(width, _cpThreadsX) / (float)texture.Info.Width;
+                float yDivisor = BitUtils.AlignUp(height, _cpThreadsY) / (float)texture.Info.Height;
 
                 bool scaleExempt = false;
 
