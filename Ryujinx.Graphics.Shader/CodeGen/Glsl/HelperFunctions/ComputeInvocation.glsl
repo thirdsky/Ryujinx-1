@@ -8,7 +8,7 @@
     // Local invocation scaling.
     uvec2 scaledInvocationID = uvec2(vec2(gl_GlobalInvocationID.xy) / scale);
 
-    return uvec3(mod(scaledInvocationID, gl_WorkGroupSize.xy), gl_LocalInvocationID);
+    return uvec3(mod(scaledInvocationID, gl_WorkGroupSize.xy), gl_LocalInvocationID.z);
 }
 
 uvec3 Helper_WorkGroupID() {
