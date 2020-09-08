@@ -490,8 +490,6 @@ namespace Ryujinx.Graphics.Gpu.Engine
         {
             DepthMode depthMode = state.Get<DepthMode>(MethodOffset.DepthMode);
 
-            _context.Renderer.Pipeline.SetDepthMode(depthMode);
-
             YControl yControl = state.Get<YControl>(MethodOffset.YControl);
 
             bool   flipY  = yControl.HasFlag(YControl.NegateY);
@@ -557,6 +555,12 @@ namespace Ryujinx.Graphics.Gpu.Engine
                     swizzleZ ^= ViewportSwizzle.NegativeFlag;
                 }
 
+                if (transform.TranslateZ == 0 && depthMode == DepthMode.MinusOneToOne)
+                {
+                    // Clips around 0 - force depth mode to ZeroToOne.
+                    depthMode = DepthMode.ZeroToOne;
+                }
+
                 viewports[index] = new Viewport(
                     region,
                     swizzleX,
@@ -568,6 +572,8 @@ namespace Ryujinx.Graphics.Gpu.Engine
             }
 
             _context.Renderer.Pipeline.SetViewports(0, viewports);
+
+            _context.Renderer.Pipeline.SetDepthMode(depthMode);
         }
 
         /// <summary>
