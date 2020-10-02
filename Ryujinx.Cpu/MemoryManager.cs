@@ -2,6 +2,7 @@ using ARMeilleure.Memory;
 using Ryujinx.Cpu.Tracking;
 using Ryujinx.Memory;
 using Ryujinx.Memory.Tracking;
+using Ryujinx.Memory.Virtual;
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
@@ -38,7 +39,11 @@ namespace Ryujinx.Cpu
         /// </summary>
         public IntPtr PageTablePointer => _pageTable.Pointer;
 
+        public ulong VirtualBase => HostVirtual == null ? 0 : (ulong)HostVirtual.Pointer;
+        public bool SoftwareMemoryProtection { get; private set; }
+
         public MemoryTracking Tracking { get; }
+        public VirtualMemoryBlock HostVirtual { get; }
 
         /// <summary>
         /// Creates a new instance of the memory manager.
@@ -66,6 +71,16 @@ namespace Ryujinx.Cpu
 
             Tracking = new MemoryTracking(this, backingMemory, PageSize);
             Tracking.EnablePhysicalProtection = false; // Disabled for now, as protection is done in software.
+
+            try
+            {
+                HostVirtual = new VirtualMemoryBlock(backingMemory, asSize, PageSize);
+                HostVirtual.RegisterTrackingAction(Tracking.VirtualMemoryEventTracking);
+            } 
+            catch (PlatformNotSupportedException)
+            {
+
+            }
         }
 
         /// <summary>
@@ -90,6 +105,7 @@ namespace Ryujinx.Cpu
                 pa += PageSize;
                 remainingSize -= PageSize;
             }
+            HostVirtual?.Map(oVa, oPa, size);
             Tracking.Map(oVa, oPa, size);
         }
 
@@ -109,6 +125,7 @@ namespace Ryujinx.Cpu
                 va += PageSize;
                 remainingSize -= PageSize;
             }
+            HostVirtual?.Unmap(oVa, size);
             Tracking.Unmap(oVa, size);
         }
 
@@ -507,6 +524,8 @@ namespace Ryujinx.Cpu
         /// <param name="protection">Memory protection to set</param>
         public void Reprotect(ulong va, ulong size, MemoryPermission protection)
         {
+            HostVirtual?.Reprotect(va, size, protection);
+
             // Protection is inverted on software pages, since the default value is 0.
             protection = (~protection) & MemoryPermission.ReadAndWrite;
 

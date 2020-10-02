@@ -1,14 +1,23 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Threading;
 
 namespace Ryujinx.Memory
 {
+    public delegate bool MemoryTrackingAction(ulong address, bool write);
+
     /// <summary>
     /// Represents a block of contiguous physical guest memory.
     /// </summary>
     public sealed class MemoryBlock : IDisposable
     {
+        [DllImport("Ryujinx.Memory.Native")]
+        private static extern IntPtr StartTrackingRegion(IntPtr address, IntPtr size, IntPtr action);
+
+        [DllImport("Ryujinx.Memory.Native")]
+        private static extern void StopTrackingRegion(IntPtr region);
+
         private IntPtr _pointer;
 
         /// <summary>
@@ -261,6 +270,20 @@ namespace Ryujinx.Memory
         private IntPtr PtrAddr(IntPtr pointer, ulong offset)
         {
             return (IntPtr)(pointer.ToInt64() + (long)offset);
+        }
+
+        private GCHandle _delegateHandle;
+
+        /// <summary>
+        /// Registers an action to call when a tracked read/write occurs on the region.
+        /// (called from memory protection signal handler)
+        /// </summary>
+        /// <param name="action">The action to call</param>
+        public void RegisterTrackingAction(MemoryTrackingAction action)
+        {
+            _delegateHandle = GCHandle.Alloc(action);
+            
+            StartTrackingRegion(_pointer, (IntPtr)Size, Marshal.GetFunctionPointerForDelegate(action));
         }
 
         /// <summary>

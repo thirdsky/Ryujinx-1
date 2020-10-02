@@ -1,11 +1,16 @@
 ﻿using Mono.Unix.Native;
+using Ryujinx.Memory.Virtual;
 using System;
 using System.Collections.Concurrent;
+using System.Runtime.InteropServices;
 
 namespace Ryujinx.Memory
 {
     static class MemoryManagementUnix
     {
+        [DllImport("libc", SetLastError = true)]
+        public static extern IntPtr mremap(IntPtr old_address, ulong old_size, ulong new_size, MremapFlags flags, IntPtr new_address);
+
         private static readonly ConcurrentDictionary<IntPtr, ulong> _allocations = new ConcurrentDictionary<IntPtr, ulong>();
 
         public static IntPtr Allocate(ulong size)
@@ -20,7 +25,16 @@ namespace Ryujinx.Memory
 
         private static IntPtr AllocateInternal(ulong size, MmapProts prot)
         {
-            const MmapFlags flags = MmapFlags.MAP_PRIVATE | MmapFlags.MAP_ANONYMOUS;
+            MmapFlags flags;
+
+            if (prot  == MmapProts.PROT_NONE) 
+            {
+                flags = MmapFlags.MAP_PRIVATE | MmapFlags.MAP_ANONYMOUS;
+            }
+            else
+            {
+                flags = MmapFlags.MAP_SHARED | MmapFlags.MAP_ANONYMOUS | (MmapFlags)0x80000;
+            }
 
             IntPtr ptr = Syscall.mmap(IntPtr.Zero, size, prot, flags, -1, 0);
 
@@ -41,6 +55,18 @@ namespace Ryujinx.Memory
         public static bool Commit(IntPtr address, ulong size)
         {
             return Syscall.mprotect(address, size, MmapProts.PROT_READ | MmapProts.PROT_WRITE) == 0;
+        }
+
+        public static IntPtr Remap(IntPtr target, IntPtr source, ulong size) {
+            int flags = (int)MremapFlags.MREMAP_MAYMOVE;
+            if (target != IntPtr.Zero) {
+                flags |= 2;
+            }
+            IntPtr result = mremap(source, 0, size, (MremapFlags)(flags), target);
+            if (result == IntPtr.Zero) {
+                throw new InvalidOperationException();
+            }
+            return result;
         }
 
         public static bool Reprotect(IntPtr address, ulong size, MemoryPermission permission)
@@ -70,6 +96,13 @@ namespace Ryujinx.Memory
             }
 
             return false;
+        }
+
+        public static HostVirtualSupportInfo GetVirtualSupportInfo() {
+            return new HostVirtualSupportInfo() {
+                SupportsRemapping = true,
+                MappingGranularity = 4096
+            };
         }
     }
 }

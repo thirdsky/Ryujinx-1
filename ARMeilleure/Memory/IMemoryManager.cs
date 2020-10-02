@@ -8,6 +8,9 @@ namespace ARMeilleure.Memory
 
         IntPtr PageTablePointer { get; }
 
+        ulong VirtualBase { get; }
+        bool SoftwareMemoryProtection { get; }
+
         T Read<T>(ulong va) where T : unmanaged;
         T ReadTracked<T>(ulong va) where T : unmanaged;
         void Write<T>(ulong va, T value) where T : unmanaged;

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Ryujinx.Memory.Virtual;
+using System;
 using System.Runtime.InteropServices;
 
 namespace Ryujinx.Memory
@@ -101,6 +102,13 @@ namespace Ryujinx.Memory
         public static bool Free(IntPtr address)
         {
             return VirtualFree(address, IntPtr.Zero, AllocationType.Release);
+        }
+
+        public static HostVirtualSupportInfo GetVirtualSupportInfo() {
+            return new HostVirtualSupportInfo() {
+                SupportsRemapping = false,
+                MappingGranularity = 65536
+            };
         }
     }
 }

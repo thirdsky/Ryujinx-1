@@ -47,6 +47,9 @@ namespace ARMeilleure.Translation
 
         public bool HighCq { get; }
 
+        public bool DirectMemory => Memory.VirtualBase != 0;
+        public ulong VirtualBase => Memory.VirtualBase;
+
         public ArmEmitterContext(IMemoryManager memory, JumpTable jumpTable, long baseAddress, bool highCq, Aarch32Mode mode)
         {
             Memory      = memory;

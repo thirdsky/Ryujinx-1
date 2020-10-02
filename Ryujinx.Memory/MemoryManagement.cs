@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Ryujinx.Memory.Virtual;
+using System;
 using System.Runtime.InteropServices;
 
 namespace Ryujinx.Memory
@@ -102,6 +103,35 @@ namespace Ryujinx.Memory
             else
             {
                 throw new PlatformNotSupportedException();
+            }
+        }
+
+        public static IntPtr Remap(IntPtr target, IntPtr source, ulong size)
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ||
+                RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                return MemoryManagementUnix.Remap(target, source, size);
+            }
+            else
+            {
+                throw new PlatformNotSupportedException();
+            }
+        }
+
+        public static HostVirtualSupportInfo GetVirtualSupportInfo() {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                return MemoryManagementWindows.GetVirtualSupportInfo();
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ||
+                     RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                return MemoryManagementUnix.GetVirtualSupportInfo();
+            }
+            else
+            {
+                return new HostVirtualSupportInfo(); // SupportsRemap is false.
             }
         }
     }
