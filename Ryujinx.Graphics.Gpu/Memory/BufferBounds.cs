@@ -1,3 +1,5 @@
+using Ryujinx.Graphics.Shader;
+
 namespace Ryujinx.Graphics.Gpu.Memory
 {
     /// <summary>
@@ -7,5 +9,6 @@ namespace Ryujinx.Graphics.Gpu.Memory
     {
         public ulong Address;
         public ulong Size;
+        public BufferUsageFlags Flags;
     }
 }

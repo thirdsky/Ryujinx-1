@@ -246,6 +246,7 @@ namespace Ryujinx.Graphics.Shader.CodeGen.Glsl.Instructions
 
             string src = TypeConversion.ReinterpretCast(context, src3, srcType, VariableType.U32);
 
+            SetStorageWriteFlag(context, indexExpr, context.Config.Stage);
             string sb = GetStorageBufferAccessor(indexExpr, offsetExpr, context.Config.Stage);
 
             return $"{sb} = {src}";
@@ -417,9 +418,7 @@ namespace Ryujinx.Graphics.Shader.CodeGen.Glsl.Instructions
                         // Resolution scaling cannot be applied to this texture right now.
                         // Flag so that we know to blacklist scaling on related textures when binding them.
 
-                        TextureDescriptor descriptor = context.TextureDescriptors[index];
-                        descriptor.Flags |= TextureUsageFlags.ResScaleUnsupported;
-                        context.TextureDescriptors[index] = descriptor;
+                        context.TextureDescriptors[index] = context.TextureDescriptors[index].SetFlag(TextureUsageFlags.ResScaleUnsupported);
                     }
                 }
 
@@ -547,6 +546,31 @@ namespace Ryujinx.Graphics.Shader.CodeGen.Glsl.Instructions
             else
             {
                 return $"textureSize({samplerName}, {lodExpr}){GetMask(texOp.Index)}";
+            }
+        }
+
+        private static void SetStorageWriteFlag(CodeGenContext context, string slotExpr, ShaderStage stage)
+        {
+            string sbName = OperandManager.GetShaderStagePrefix(stage);
+
+            string searchString = $"{sbName}_{DefaultNames.StorageNamePrefix}_{DefaultNames.BlockSuffix}[{slotExpr}]";
+
+            // Attempt to find a BufferDescriptor with the given name.
+            // If it cannot be found, assume that the slot expression could potentially index any of them,
+            // and set the flag on all storage buffers.
+
+            int index = context.SBufferDescriptors.FindIndex(buffer => buffer.Name == searchString);
+
+            if (index != -1)
+            {
+                context.SBufferDescriptors[index] = context.SBufferDescriptors[index].SetFlag(BufferUsageFlags.Write);
+            }
+            else
+            {
+                for (int i = 0; i < context.SBufferDescriptors.Count; i++)
+                {
+                    context.SBufferDescriptors[i] = context.SBufferDescriptors[i].SetFlag(BufferUsageFlags.Write);
+                }
             }
         }
 
