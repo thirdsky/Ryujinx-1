@@ -368,7 +368,6 @@ namespace Ryujinx.Graphics.Gpu.Image
 
             SetInfo(new TextureInfo(
                 Info.Address,
-                Info.GpuAddress,
                 width,
                 height,
                 depthOrLayers,
@@ -555,9 +554,7 @@ namespace Ryujinx.Graphics.Gpu.Image
 
             _memoryTracking?.Reprotect();
 
-            ReadOnlySpan<byte> data = Info.GpuAddress == 0UL
-                ? _context.PhysicalMemory.GetSpan(Address, (int)Size)
-                : _context.MemoryManager.GetSpan(Info.GpuAddress, (int)Size);
+            ReadOnlySpan<byte> data = _context.PhysicalMemory.GetSpan(Address, (int)Size);
 
             IsModified = false;
 
@@ -692,11 +689,11 @@ namespace Ryujinx.Graphics.Gpu.Image
 
             if (tracked)
             {
-                _context.MemoryManager.Write(Info.GpuAddress, GetTextureDataFromGpu(tracked));
+                _context.PhysicalMemory.Write(Address, GetTextureDataFromGpu(tracked));
             }
             else
             {
-                _context.MemoryManager.WriteUntracked(Info.GpuAddress, GetTextureDataFromGpu(tracked));
+                _context.PhysicalMemory.WriteUntracked(Address, GetTextureDataFromGpu(tracked));
             }
         }
 
@@ -728,7 +725,7 @@ namespace Ryujinx.Graphics.Gpu.Image
                     texture = _flushHostTexture = GetScaledHostTexture(1f, _flushHostTexture);
                 }
 
-                _context.MemoryManager.WriteUntracked(Info.GpuAddress, GetTextureDataFromGpu(false, texture));
+                _context.PhysicalMemory.WriteUntracked(Address, GetTextureDataFromGpu(false, texture));
             });
         }
 

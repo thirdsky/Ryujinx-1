@@ -140,8 +140,7 @@ namespace Ryujinx.Graphics.Gpu.Image
         /// <returns>The texture information</returns>
         private TextureInfo GetInfo(TextureDescriptor descriptor)
         {
-            ulong gpuVa = descriptor.UnpackAddress();
-            ulong address = Context.MemoryManager.Translate(gpuVa);
+            ulong address = Context.MemoryManager.Translate(descriptor.UnpackAddress());
 
             int width         = descriptor.UnpackWidth();
             int height        = descriptor.UnpackHeight();
@@ -225,7 +224,6 @@ namespace Ryujinx.Graphics.Gpu.Image
 
             return new TextureInfo(
                 address,
-                gpuVa,
                 width,
                 height,
                 depthOrLayers,

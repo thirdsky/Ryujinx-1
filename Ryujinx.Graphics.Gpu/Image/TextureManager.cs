@@ -470,8 +470,7 @@ namespace Ryujinx.Graphics.Gpu.Image
         /// <returns>The texture</returns>
         public Texture FindOrCreateTexture(CopyTexture copyTexture, FormatInfo formatInfo, bool preferScaling = true, Size? sizeHint = null)
         {
-            ulong gpuVa = copyTexture.Address.Pack();
-            ulong address = _context.MemoryManager.Translate(gpuVa);
+            ulong address = _context.MemoryManager.Translate(copyTexture.Address.Pack());
 
             if (address == MemoryManager.PteUnmapped)
             {
@@ -494,7 +493,6 @@ namespace Ryujinx.Graphics.Gpu.Image
 
             TextureInfo info = new TextureInfo(
                 address,
-                gpuVa,
                 width,
                 copyTexture.Height,
                 copyTexture.Depth,
@@ -533,8 +531,7 @@ namespace Ryujinx.Graphics.Gpu.Image
         /// <returns>The texture</returns>
         public Texture FindOrCreateTexture(RtColorState colorState, int samplesInX, int samplesInY, Size sizeHint)
         {
-            ulong gpuVa = colorState.Address.Pack();
-            ulong address = _context.MemoryManager.Translate(gpuVa);
+            ulong address = _context.MemoryManager.Translate(colorState.Address.Pack());
 
             if (address == MemoryManager.PteUnmapped)
             {
@@ -587,7 +584,6 @@ namespace Ryujinx.Graphics.Gpu.Image
 
             TextureInfo info = new TextureInfo(
                 address,
-                gpuVa,
                 width,
                 colorState.Height,
                 colorState.Depth,
@@ -620,8 +616,7 @@ namespace Ryujinx.Graphics.Gpu.Image
         /// <returns>The texture</returns>
         public Texture FindOrCreateTexture(RtDepthStencilState dsState, Size3D size, int samplesInX, int samplesInY, Size sizeHint)
         {
-            ulong gpuVa = dsState.Address.Pack();
-            ulong address = _context.MemoryManager.Translate(gpuVa);
+            ulong address = _context.MemoryManager.Translate(dsState.Address.Pack());
 
             if (address == MemoryManager.PteUnmapped)
             {
@@ -639,7 +634,6 @@ namespace Ryujinx.Graphics.Gpu.Image
 
             TextureInfo info = new TextureInfo(
                 address,
-                gpuVa,
                 size.Width,
                 size.Height,
                 size.Depth,
@@ -1101,7 +1095,6 @@ namespace Ryujinx.Graphics.Gpu.Image
 
             return new TextureInfo(
                 info.Address,
-                info.GpuAddress,
                 width,
                 height,
                 depthOrLayers,
